@@ -125,4 +125,17 @@ describe("extract mocked branches", () => {
     await expect(pending).rejects.toThrow("No stream");
     expect(zipfile.close).toHaveBeenCalled();
   });
+
+  it("rejects extractAll when an entry escapes the output directory", async () => {
+    const zipfile = new FakeZipFile();
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
+
+    const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
+    zipfile.emit("entry", makeEntry("../outside.txt"));
+
+    await expect(pending).rejects.toThrow("Unsafe archive entry path");
+    expect(zipfile.close).toHaveBeenCalled();
+  });
 });
