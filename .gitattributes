@@ -1,1 +1,8 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.jar filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.apk filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.vsix filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.xpi filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.whl filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.war filter=lfs diff=lfs merge=lfs -text
+.fixtures/*.ear filter=lfs diff=lfs merge=lfs -text

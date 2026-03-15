@@ -5,6 +5,13 @@ import { listEntries, openEntryReadStream } from "../archive/archive";
 import { extractEntry, extractAll, extractAllTargetDir } from "../archive/extract";
 import { logger } from "../logger";
 import { getInitialHtml } from "../webview/content";
+import {
+  cleanupTempPreviews,
+  createTempPreviewPath,
+  getEntryExtractionTarget,
+  markTempPreviewUsed,
+  shouldReuseTempPreview,
+} from "./archivePaths";
 import { makeZipPreviewUri } from "./zipContentProvider";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -45,6 +52,26 @@ const TEXT_EXTENSIONS = new Set([
 class ZipDocument implements vscode.CustomDocument {
   constructor(public readonly uri: vscode.Uri) {}
   dispose(): void {}
+}
+
+async function writeStreamToFile(
+  stream: NodeJS.ReadableStream,
+  targetPath: string,
+): Promise<vscode.Uri> {
+  await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
+  const writeStream = fs.createWriteStream(targetPath);
+  stream.pipe(writeStream);
+  await new Promise<void>((resolve, reject) => {
+    writeStream.on("finish", () => resolve());
+    writeStream.on("error", reject);
+    stream.on("error", reject);
+  });
+  return vscode.Uri.file(targetPath);
+}
+
+function isTextEntryName(name: string): boolean {
+  const ext = path.extname(name).toLowerCase().replace(/^\./, "");
+  return TEXT_EXTENSIONS.has(ext) || !ext;
 }
 
 export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProvider<ZipDocument> {
@@ -108,46 +135,27 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
         if (msg.type === "openEntry" && msg.path) {
           const entryPath = msg.path;
           try {
-            const { entry, stream } = await openEntryReadStream(zipPath, entryPath);
-            if (entry.isDirectory) {
-              webviewPanel.webview.postMessage({
-                type: "openResult",
-                success: false,
-                error: "Cannot open a folder.",
-              });
-              return;
-            }
-            const ext = path
-              .extname(entry.name || "")
-              .toLowerCase()
-              .replace(/^\./, "");
-            const isText = TEXT_EXTENSIONS.has(ext) || !ext;
-            if (isText) {
+            if (isTextEntryName(path.basename(entryPath))) {
               const uri = makeZipPreviewUri(zipPath, entryPath);
               const doc = await vscode.workspace.openTextDocument(uri);
               await vscode.window.showTextDocument(doc, { preview: false });
               webviewPanel.webview.postMessage({ type: "openResult", success: true });
             } else {
-              const defaultName = path.basename(entryPath);
-              const chosen = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file(defaultName),
-                saveLabel: "Save",
-              });
-              if (chosen) {
-                const w = fs.createWriteStream(chosen.fsPath);
-                stream.pipe(w);
-                await new Promise<void>((resolve, reject) => {
-                  w.on("finish", () => resolve());
-                  w.on("error", reject);
-                });
-                webviewPanel.webview.postMessage({ type: "openResult", success: true });
-              } else {
-                webviewPanel.webview.postMessage({
-                  type: "openResult",
-                  success: false,
-                  error: "Cancelled",
-                });
+              await cleanupTempPreviews();
+              const tempPath = createTempPreviewPath(zipPath, entryPath);
+              const reuseTempPreview = shouldReuseTempPreview(zipPath, tempPath);
+              const tempUri = reuseTempPreview
+                ? vscode.Uri.file(tempPath)
+                : await openEntryReadStream(zipPath, entryPath).then(async ({ stream }) => {
+                    const uri = await writeStreamToFile(stream, tempPath);
+                    await markTempPreviewUsed(tempPath);
+                    return uri;
+                  });
+              if (reuseTempPreview) {
+                await markTempPreviewUsed(tempPath);
               }
+              await vscode.commands.executeCommand("vscode.open", tempUri, { preview: false });
+              webviewPanel.webview.postMessage({ type: "openResult", success: true });
             }
           } catch (err) {
             logger.error("Open entry failed", err);
@@ -164,11 +172,17 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
           try {
             let targetPath: string | undefined = msg.targetPath;
             if (!targetPath) {
-              const chosen = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file(path.basename(msg.path)),
-                saveLabel: "Extract here",
+              const chosen = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: "Extract here",
+                title: "Select destination folder",
               });
-              targetPath = chosen?.fsPath;
+              const folder = chosen?.[0]?.fsPath;
+              if (folder) {
+                targetPath = getEntryExtractionTarget(folder, msg.path);
+              }
             }
             if (!targetPath) {
               webviewPanel.webview.postMessage({
@@ -179,7 +193,11 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
               return;
             }
             await extractEntry(zipPath, msg.path, targetPath);
-            webviewPanel.webview.postMessage({ type: "extractResult", success: true });
+            webviewPanel.webview.postMessage({
+              type: "extractResult",
+              success: true,
+              targetPath,
+            });
           } catch (err) {
             logger.error("Extract entry failed", err);
             const message = err instanceof Error ? err.message : String(err);
@@ -194,9 +212,12 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
         if (msg.type === "extractAll") {
           try {
             const targetDir = extractAllTargetDir(zipPath);
+            const archiveFolderName = path.basename(targetDir);
+            let extractionTarget = targetDir;
+            let overwrite = false;
             if (fs.existsSync(targetDir)) {
               const choice = await vscode.window.showWarningMessage(
-                `Folder "${path.basename(targetDir)}" already exists.`,
+                `Folder "${archiveFolderName}" already exists.`,
                 "Overwrite",
                 "Cancel",
                 "Choose other folder",
@@ -213,7 +234,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
                 const chosen = await vscode.window.showOpenDialog({
                   canSelectFolders: true,
                   canSelectMany: false,
-                  title: "Select folder to extract to",
+                  title: "Select parent folder for extraction",
                 });
                 const folder = chosen?.[0]?.fsPath;
                 if (!folder) {
@@ -224,14 +245,18 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
                   });
                   return;
                 }
-                await extractAll(zipPath, folder, { overwrite: true });
+                extractionTarget = path.join(folder, archiveFolderName);
+                overwrite = fs.existsSync(extractionTarget);
               } else {
-                await extractAll(zipPath, targetDir, { overwrite: true });
+                overwrite = true;
               }
-            } else {
-              await extractAll(zipPath, targetDir, { overwrite: false });
             }
-            webviewPanel.webview.postMessage({ type: "extractResult", success: true });
+            await extractAll(zipPath, extractionTarget, { overwrite });
+            webviewPanel.webview.postMessage({
+              type: "extractResult",
+              success: true,
+              targetPath: extractionTarget,
+            });
           } catch (err) {
             logger.error("Extract all failed", err);
             const message = err instanceof Error ? err.message : String(err);
