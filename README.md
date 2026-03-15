@@ -14,7 +14,7 @@ Zip Preview replaces the usual binary file experience with a focused archive vie
 
 ## Screenshots
 
-_Coming soon_
+![Screenshot of the extension in action](assets/example/screenshot.png)
 
 ## How To Use
 
