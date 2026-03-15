@@ -1,18 +1,18 @@
 {
-  "name": "zip-preview",
-  "displayName": "Zip Preview",
-  "description": "VS Code extension: preview zip file contents when opening .zip files",
+  "name": "compress-preview",
+  "displayName": "Compress Preview",
+  "description": "VS Code extension: preview compressed file contents when opening .zip files",
   "publisher": "bircni",
   "version": "0.0.1",
   "icon": "assets/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bircni/zip-preview"
+    "url": "https://github.com/bircni/compress-preview"
   },
-  "homepage": "https://github.com/bircni/zip-preview",
+  "homepage": "https://github.com/bircni/compress-preview",
   "bugs": {
-    "url": "https://github.com/bircni/zip-preview/issues"
+    "url": "https://github.com/bircni/compress-preview/issues"
   },
   "keywords": [
     "zip",
@@ -46,7 +46,7 @@
     "format": "prettier --check \"src/**/*.ts\" \"*.json\"",
     "format:write": "prettier --write \"src/**/*.ts\" \"*.json\"",
     "install:debug": "npm run build && code --install-extension dist/extension.vsix --force",
-    "uninstall:debug": "code --uninstall-extension zip-preview.zip-preview",
+    "uninstall:debug": "code --uninstall-extension bircni.compress-preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "package": "vsce package --out dist/extension.vsix",
@@ -86,13 +86,13 @@
     "typescript-eslint": "8.57.0"
   },
   "activationEvents": [
-    "onCustomEditor:zipPreview"
+    "onCustomEditor:compressPreview"
   ],
   "contributes": {
     "customEditors": [
       {
-        "viewType": "zipPreview",
-        "displayName": "Zip Preview",
+        "viewType": "compressPreview",
+        "displayName": "Compress Preview",
         "selector": [
           {
             "filenamePattern": "*.zip"

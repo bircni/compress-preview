@@ -1,6 +1,6 @@
 /**
  * Structured logging for observability (constitution).
- * When setOutputChannel is called (on extension activate), logs go to the "Zip Preview" Output panel.
+ * When setOutputChannel is called (on extension activate), logs go to the "Compress Preview" Output panel.
  */
 
 import type { OutputChannel } from "vscode";

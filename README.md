@@ -1,8 +1,8 @@
-# Zip Preview
+# Compress Preview
 
 Preview the contents of a `.zip` file directly inside VS Code.
 
-Zip Preview replaces the usual binary file experience with a focused archive view so you can inspect entries, open text files, and extract files without leaving the editor.
+Compress Preview replaces the usual binary file experience with a focused archive view so you can inspect entries, open text files, and extract files without leaving the editor.
 
 ## What It Does
 
@@ -54,7 +54,7 @@ Install from the VS Code Marketplace, or install a generated `.vsix` package man
 
 ## Feedback
 
-Issues and feature requests: <https://github.com/bircni/zip-preview/issues>
+Issues and feature requests: <https://github.com/bircni/compress-preview/issues>
 
 ## License
 

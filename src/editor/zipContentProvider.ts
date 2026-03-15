@@ -1,12 +1,12 @@
 /**
- * TextDocumentContentProvider for zip-preview:// URIs.
+ * TextDocumentContentProvider for compress-preview:// URIs.
  * Resolves to the text content of an entry inside a zip (read-only).
  */
 
 import * as vscode from "vscode";
 import { openEntryReadStream } from "../archive/archive";
 
-const SCHEME = "zip-preview";
+const SCHEME = "compress-preview";
 
 function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,7 +23,7 @@ export class ZipContentProvider implements vscode.TextDocumentContentProvider {
     const zipPath = params.get("zip") ?? "";
     const entryPath = params.get("entry") ?? uri.path.replace(/^\//, "");
     if (!zipPath || !entryPath) {
-      return Promise.reject(new Error("Invalid zip-preview URI"));
+      return Promise.reject(new Error("Invalid compress-preview URI"));
     }
     return openEntryReadStream(zipPath, entryPath).then(({ stream }) => streamToString(stream));
   }

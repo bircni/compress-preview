@@ -63,7 +63,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
   ) {
     const zipPath = document.uri.fsPath;
     const cspSource = webviewPanel.webview.cspSource;
-    logger.info("zip preview resolveCustomEditor", {
+    logger.info("compress preview resolveCustomEditor", {
       zipPath,
       uriScheme: document.uri.scheme,
       cspSourceLength: cspSource.length,

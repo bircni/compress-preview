@@ -43,13 +43,17 @@ describe("extension", () => {
 
       activate(context as never);
 
-      expect(createOutputChannel).toHaveBeenCalledWith("Zip Preview");
+      expect(createOutputChannel).toHaveBeenCalledWith("Compress Preview");
       expect(setOutputChannel).toHaveBeenCalledWith(channel);
       expect(registerZipContentProvider).toHaveBeenCalledWith(context);
       expect(ZipPreviewEditorProvider).toHaveBeenCalledTimes(1);
-      expect(registerCustomEditorProvider).toHaveBeenCalledWith("zipPreview", providerInstance, {
-        webviewOptions: { retainContextWhenHidden: true },
-      });
+      expect(registerCustomEditorProvider).toHaveBeenCalledWith(
+        "compressPreview",
+        providerInstance,
+        {
+          webviewOptions: { retainContextWhenHidden: true },
+        },
+      );
       expect(context.subscriptions).toEqual([channel, registration]);
       expect(() => deactivate()).not.toThrow();
     });

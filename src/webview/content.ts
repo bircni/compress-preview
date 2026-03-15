@@ -35,7 +35,7 @@ function getTemplateHtml(): string {
 }
 
 /**
- * Webview HTML and script for zip preview: hierarchy (indented list by path) and entry metadata.
+ * Webview HTML and script for compress preview: hierarchy (indented list by path) and entry metadata.
  * @param cspSource - Webview cspSource so inline script/style are allowed (required for CSP).
  * @param initialData - When set, entries are embedded in the page so the tree shows without postMessage.
  */
