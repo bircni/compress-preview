@@ -47,12 +47,14 @@
     "audit": "npm audit --audit-level high",
     "build": "npm run compile && npm run bundle && npm run copy:webview && npm run package",
     "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node18 --external:vscode --outfile=dist/extension.js --sourcemap",
+    "check:fixtures": "node scripts/check-fixtures.js",
     "check-unused": "depcheck .",
     "clean": "rimraf dist",
     "compile": "tsc --project tsconfig.build.json",
-    "copy:webview": "mkdir -p dist/webview && cp src/webview/content.html dist/webview/content.html",
+    "copy:webview": "node scripts/copy-webview.js",
     "format": "prettier --check \"src/**/*.ts\" \"*.json\"",
     "format:write": "prettier --write \"src/**/*.ts\" \"*.json\"",
+    "generate:fixtures": "node scripts/generate-fixtures.js",
     "install:code:debug": "npm run build && code --install-extension dist/extension.vsix --force",
     "uninstall:code:debug": "code --uninstall-extension bircni.compress-preview",
     "install:cursor:debug": "npm run build && cursor --install-extension dist/extension.vsix --force",
@@ -66,7 +68,7 @@
     "test:report": "jest && echo 'HTML report at: .tmp/coverage/lcov-report/index.html'",
     "test:watch": "jest --watch",
     "release": "node scripts/release.js",
-    "validate": "npm run check-unused && npm run lint && npm run format && npm run test:coverage && npm run test:e2e && npm run build && npm run audit",
+    "validate": "npm run check-unused && npm run lint && npm run format && npm run check:fixtures && npm run test:coverage && npm run test:e2e && npm run build && npm run audit",
     "watch": "tsc --project tsconfig.build.json --watch"
   },
   "dependencies": {
@@ -101,7 +103,8 @@
     "rimraf": "6.1.3",
     "ts-jest": "29.4.6",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.57.0"
+    "typescript-eslint": "8.57.0",
+    "yazl": "^3.3.1"
   },
   "activationEvents": [
     "onCustomEditor:compressPreview"
