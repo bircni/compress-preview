@@ -1,0 +1,19 @@
+{
+  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "target": "esnext",
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "examples",
+    "examples/**",
+    "**/examples/**",
+    "**/examples/**/*.js",
+    "**/examples/**/*.ts",
+    "node_modules"
+  ]
+}

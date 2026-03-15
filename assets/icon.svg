@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Zip Preview icon</title>
+  <desc id="desc">A stylized archive box with a zipper and a preview lens.</desc>
+  <defs>
+    <linearGradient id="bg" x1="32" y1="24" x2="224" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1f6feb"/>
+      <stop offset="1" stop-color="#0f3d99"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="66" y1="52" x2="173" y2="181" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff2c2"/>
+      <stop offset="1" stop-color="#f0b848"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="150" y1="132" x2="226" y2="208" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fbff" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#d3e8ff" stop-opacity=".82"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#08152e" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path d="M60 72c0-10.493 8.507-19 19-19h68.663c5.04 0 9.874 2.003 13.438 5.566l22.333 22.333A19 19 0 0 1 189 94.337V165c0 10.493-8.507 19-19 19H79c-10.493 0-19-8.507-19-19V72Z" fill="url(#panel)"/>
+    <path d="M147 53v29c0 7.18 5.82 13 13 13h29" fill="#ffe39a" opacity=".95"/>
+    <path d="M84 88h62" stroke="#9b5e10" stroke-linecap="round" stroke-width="10"/>
+    <path d="M84 112h62" stroke="#9b5e10" stroke-linecap="round" stroke-width="10" opacity=".86"/>
+    <path d="M84 136h46" stroke="#9b5e10" stroke-linecap="round" stroke-width="10" opacity=".72"/>
+    <g transform="translate(116 72)">
+      <rect x="0" y="0" width="18" height="18" rx="4" fill="#174ea6"/>
+      <rect x="0" y="20" width="18" height="16" rx="4" fill="#174ea6"/>
+      <rect x="0" y="38" width="18" height="16" rx="4" fill="#174ea6"/>
+      <rect x="0" y="56" width="18" height="16" rx="4" fill="#174ea6"/>
+      <rect x="0" y="74" width="18" height="16" rx="4" fill="#174ea6"/>
+    </g>
+    <g transform="translate(158 144)">
+      <circle cx="24" cy="24" r="32" fill="url(#glass)" stroke="#f8fbff" stroke-width="8"/>
+      <path d="M44 44l24 24" stroke="#f8fbff" stroke-linecap="round" stroke-width="12"/>
+      <path d="M12 28c4-9 11-14 21-16" stroke="#8ec5ff" stroke-linecap="round" stroke-width="7"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+# Dependencies and build
+node_modules/
+dist/
+build/
+out/
+.tmp/
+*.tsbuildinfo
+
+# Logs and env
+*.log
+.env
+.env.*
+
+# IDE and OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Test and coverage
+coverage/
+.nyc_output/
+
+# VS Code extension
+*.vsix
+
+.cursor/
+specs/**
+.specify/
