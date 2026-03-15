@@ -54,6 +54,7 @@
     "test:coverage": "jest --coverage",
     "test:report": "jest && echo 'HTML report at: .tmp/coverage/lcov-report/index.html'",
     "test:watch": "jest --watch",
+    "release": "node scripts/release.js",
     "validate": "npm run check-unused && npm run lint && npm run format && npm run test:coverage && npm run build",
     "watch": "tsc --project tsconfig.build.json --watch"
   },
