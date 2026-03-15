@@ -44,7 +44,9 @@ describe("archive mocked branches", () => {
 
   it("returns a partial list when the timeout elapses", async () => {
     const zipfile = new FakeZipFile();
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile as unknown as yauzl.ZipFile));
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
 
     const result = await listEntries(__filename, { timeoutMs: 1 });
 
@@ -56,7 +58,9 @@ describe("archive mocked branches", () => {
 
   it("rejects listEntries when the zip emits an error", async () => {
     const zipfile = new FakeZipFile();
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile as unknown as yauzl.ZipFile));
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
 
     const pending = listEntries(__filename);
     zipfile.emit("error", new Error("zip broke"));
@@ -68,7 +72,9 @@ describe("archive mocked branches", () => {
     const zipfile = new FakeZipFile();
     const stream = new PassThrough();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, stream));
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile as unknown as yauzl.ZipFile));
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
 
     const pending = openEntryReadStream(__filename, "match.txt");
     zipfile.emit("entry", makeEntry("other.txt"));
@@ -96,7 +102,9 @@ describe("archive mocked branches", () => {
   it("rejects when openEntryReadStream receives a stream error", async () => {
     const zipfile = new FakeZipFile();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(new Error("stream failed")));
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile as unknown as yauzl.ZipFile));
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
 
     const pending = openEntryReadStream(__filename, "file.txt");
     zipfile.emit("entry", makeEntry("file.txt"));
@@ -108,7 +116,9 @@ describe("archive mocked branches", () => {
   it("rejects when openEntryReadStream gets no stream", async () => {
     const zipfile = new FakeZipFile();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, undefined));
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile as unknown as yauzl.ZipFile));
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
 
     const pending = openEntryReadStream(__filename, "file.txt");
     zipfile.emit("entry", makeEntry("file.txt"));

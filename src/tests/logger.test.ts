@@ -1,3 +1,5 @@
+import type * as loggerModule from "../logger";
+
 describe("logger", () => {
   afterEach(() => {
     jest.resetModules();
@@ -7,7 +9,7 @@ describe("logger", () => {
   it("writes info, warn, and error messages to the output channel", () => {
     jest.isolateModules(() => {
       const appendLine = jest.fn();
-      const mod = require("../logger") as typeof import("../logger");
+      const mod = require("../logger") as typeof loggerModule;
 
       mod.setOutputChannel({ appendLine } as never);
 
@@ -28,7 +30,7 @@ describe("logger", () => {
   it("falls back to console.error when no output channel is set", () => {
     jest.isolateModules(() => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
-      const mod = require("../logger") as typeof import("../logger");
+      const mod = require("../logger") as typeof loggerModule;
 
       mod.logger.info("startup");
 
