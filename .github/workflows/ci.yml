@@ -44,6 +44,38 @@ jobs:
       - name: Test
         run: npm run test:coverage
 
+  e2e:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      CI: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".node-version"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extension smoke tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+
+      - name: Extension smoke tests (macOS)
+        if: runner.os == 'macOS'
+        run: npm run test:e2e
+
   security:
     runs-on: ubuntu-latest
     timeout-minutes: 10
