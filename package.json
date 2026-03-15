@@ -3,7 +3,7 @@
   "displayName": "Compress Preview",
   "description": "VS Code extension: preview compressed file contents when opening .zip files",
   "publisher": "bircni",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "icon": "assets/icon.png",
   "license": "MIT",
   "repository": {
