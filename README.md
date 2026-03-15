@@ -12,6 +12,10 @@ Zip Preview replaces the usual binary file experience with a focused archive vie
 - Lets you extract one file or the full archive.
 - Handles large archives with loading and partial-result states instead of hanging forever.
 
+## Screenshots
+
+_Coming soon_
+
 ## How To Use
 
 1. Open any `.zip` file in VS Code.

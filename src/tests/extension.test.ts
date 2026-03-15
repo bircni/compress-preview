@@ -1,3 +1,5 @@
+import type * as extensionModule from "../extension";
+
 describe("extension", () => {
   afterEach(() => {
     jest.resetModules();
@@ -36,7 +38,7 @@ describe("extension", () => {
         ZipPreviewEditorProvider,
       }));
 
-      const { activate, deactivate } = require("../extension") as typeof import("../extension");
+      const { activate, deactivate } = require("../extension") as typeof extensionModule;
       const context = { subscriptions: [] as unknown[] };
 
       activate(context as never);
