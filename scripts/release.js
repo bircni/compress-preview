@@ -2,8 +2,8 @@
 const { execSync } = require("child_process");
 
 /**
- * Release helper script for markdown-inline-editor-vscode.
- * - Runs validation checks (lint:docs, test, build)
+ * Release helper script for this project.
+ * - Runs validation checks
  * - Gets next version with git-cliff (or a custom version via --version)
  * - Generates CHANGELOG.md
  * - Bumps package.json version
