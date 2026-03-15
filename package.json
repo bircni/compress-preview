@@ -3,7 +3,7 @@
   "displayName": "Zip Preview",
   "description": "VS Code extension: preview zip file contents when opening .zip files",
   "publisher": "bircni",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "icon": "assets/icon.png",
   "license": "MIT",
   "repository": {
@@ -37,11 +37,12 @@
   "main": "dist/extension.js",
   "scripts": {
     "audit": "npm audit --audit-level high",
-    "build": "npm run compile && npm run bundle && npm run package",
+    "build": "npm run compile && npm run bundle && npm run copy:webview && npm run package",
     "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node18 --external:vscode --outfile=dist/extension.js --sourcemap",
     "check-unused": "depcheck .",
     "clean": "rimraf dist",
     "compile": "tsc --project tsconfig.build.json",
+    "copy:webview": "mkdir -p dist/webview && cp src/webview/content.html dist/webview/content.html",
     "format": "prettier --check \"src/**/*.ts\" \"*.json\"",
     "format:write": "prettier --write \"src/**/*.ts\" \"*.json\"",
     "install:debug": "npm run build && code --install-extension dist/extension.vsix --force",
