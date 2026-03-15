@@ -18,6 +18,7 @@ const config: Config = {
     ],
   },
   coverageDirectory: ".tmp/coverage/",
+  coverageReporters: ["json-summary", "json", "lcov", "text", "clover"],
   collectCoverageFrom: [
     "src/**/*.ts",
     "!src/editor/**",

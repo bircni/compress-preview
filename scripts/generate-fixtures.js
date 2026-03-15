@@ -1,10 +1,11 @@
 const fs = require("fs");
 const path = require("path");
-const archiver = require("archiver");
+const yazl = require("yazl");
 
 const rootDir = path.resolve(__dirname, "..");
 const fixturesDir = path.join(rootDir, ".fixtures");
 const tempDir = path.join(rootDir, ".tmp", "archive-fixture-src");
+const FIXTURE_DATE = new Date("2024-01-01T00:00:00.000Z");
 
 const zipBasedFixtures = [
   "sample-library.jar",
@@ -16,16 +17,46 @@ const zipBasedFixtures = [
   "sample-enterprise.ear",
 ];
 
-async function writeZipArchive(targetFile, sourceDir, rootInArchive = false) {
+function collectFiles(dir, rootDirForNames) {
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const absolutePath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        return collectFiles(absolutePath, rootDirForNames);
+      }
+
+      return [
+        {
+          absolutePath,
+          archivePath: path.relative(rootDirForNames, absolutePath).replace(/\\/g, "/"),
+        },
+      ];
+    });
+}
+
+async function writeZipArchive(targetFile, sourceDir) {
+  const files = collectFiles(sourceDir, sourceDir);
+
   await new Promise((resolve, reject) => {
+    const zipFile = new yazl.ZipFile();
     const output = fs.createWriteStream(targetFile);
-    const archive = archiver("zip", { zlib: { level: 9 } });
+
     output.on("close", resolve);
     output.on("error", reject);
-    archive.on("error", reject);
-    archive.pipe(output);
-    archive.directory(sourceDir + path.sep, rootInArchive);
-    archive.finalize();
+    zipFile.outputStream.on("error", reject).pipe(output);
+
+    for (const file of files) {
+      zipFile.addFile(file.absolutePath, file.archivePath, {
+        mtime: FIXTURE_DATE,
+        mode: 0o100644,
+        compress: true,
+        forceDosTimestamp: true,
+      });
+    }
+
+    zipFile.end();
   });
 }
 
@@ -60,7 +91,7 @@ async function main() {
   );
 
   for (const fileName of zipBasedFixtures) {
-    await writeZipArchive(path.join(fixturesDir, fileName), tempDir, false);
+    await writeZipArchive(path.join(fixturesDir, fileName), tempDir);
   }
 }
 
