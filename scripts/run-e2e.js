@@ -5,6 +5,7 @@ async function main() {
   const extensionDevelopmentPath = path.resolve(__dirname, "..");
   const extensionTestsPath = path.resolve(__dirname, "..", "src", "e2e", "suite", "index.js");
   const userDataDir = path.resolve(__dirname, "..", ".tmp", "vscode-e2e-user-data");
+  process.env.COMPRESS_PREVIEW_ENABLE_TEST_COMMANDS = "1";
 
   await runTests({
     extensionDevelopmentPath,
