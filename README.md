@@ -69,7 +69,7 @@ Common binary files open through a temporary extracted preview file so they can 
 ## Testing
 
 - `npm test` runs unit and fixture-backed integration tests.
-- `npm run test:e2e` runs VS Code extension-host smoke tests against the packaged extension bundle.
+- `npm run test:e2e` runs VS Code extension-host smoke tests plus `jsdom`-based webview integration tests against the packaged extension bundle.
 
 ## Install
 
