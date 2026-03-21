@@ -99,7 +99,7 @@ function visibleRowNames(document) {
   );
 }
 
-describe("Compress Preview Webview E2E", () => {
+describe("Compress Preview Webview Integration", () => {
   it("updates visible rows when searching and filtering", async () => {
     const { document, window, dom } = await createWebviewHarness({ entries: sampleEntries });
     const searchInput = document.getElementById("searchInput");

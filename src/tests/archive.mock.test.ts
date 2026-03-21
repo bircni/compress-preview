@@ -4,6 +4,7 @@ import * as path from "path";
 import { PassThrough } from "stream";
 import * as yauzl from "yauzl";
 import { listEntries, openEntryReadStream } from "../archive/archive";
+import type * as archiveModule from "../archive/archive";
 
 jest.mock("yauzl", () => ({
   open: jest.fn(),
@@ -36,6 +37,7 @@ describe("archive mocked branches", () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     fs.rmSync(archivePath, { force: true });
   });
 
@@ -77,6 +79,28 @@ describe("archive mocked branches", () => {
     await expect(pending).rejects.toThrow("zip broke");
   });
 
+  it("ignores timeout and late zip events after listEntries has already settled", async () => {
+    jest.useFakeTimers();
+    const zipfile = new FakeZipFile();
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
+
+    const pending = listEntries(archivePath, { timeoutMs: 10 });
+    zipfile.emit("entry", makeEntry("file.txt"));
+    zipfile.emit("end");
+    const result = await pending;
+
+    expect(result.isPartial).toBe(false);
+    jest.advanceTimersByTime(10);
+    expect(zipfile.close).not.toHaveBeenCalled();
+
+    zipfile.emit("entry", makeEntry("late.txt"));
+    zipfile.emit("end");
+    zipfile.emit("error", new Error("ignored"));
+    expect(zipfile.readEntry).toHaveBeenCalledTimes(2);
+  });
+
   it("opens a matching entry stream after skipping non-matching entries", async () => {
     const zipfile = new FakeZipFile();
     const stream = new PassThrough();
@@ -97,6 +121,26 @@ describe("archive mocked branches", () => {
 
     stream.emit("close");
     expect(zipfile.close).toHaveBeenCalled();
+  });
+
+  it("ignores late entry, end, and error events after openEntryReadStream has settled", async () => {
+    const zipfile = new FakeZipFile();
+    const stream = new PassThrough();
+    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, stream));
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
+
+    const pending = openEntryReadStream(archivePath, "file.txt");
+    zipfile.emit("entry", makeEntry("file.txt"));
+    await pending;
+
+    stream.emit("close");
+    zipfile.emit("entry", makeEntry("late.txt"));
+    zipfile.emit("end");
+    zipfile.emit("error", new Error("ignored"));
+
+    expect(zipfile.close).toHaveBeenCalledTimes(1);
   });
 
   it("rejects when openEntryReadStream cannot open the archive", async () => {
@@ -150,5 +194,50 @@ describe("archive mocked branches", () => {
 
     await expect(pending).rejects.toThrow("Cannot open a folder.");
     expect(zipfile.close).toHaveBeenCalled();
+  });
+
+  it("rejects when openEntryReadStream reaches the end without a matching entry", async () => {
+    const zipfile = new FakeZipFile();
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
+
+    const pending = openEntryReadStream(archivePath, "missing.txt");
+    zipfile.emit("entry", makeEntry("other.txt"));
+    zipfile.emit("end");
+
+    await expect(pending).rejects.toThrow("Entry not found in archive: missing.txt");
+    expect(zipfile.close).toHaveBeenCalled();
+  });
+
+  it("rejects when openEntryReadStream receives a zip error before settling", async () => {
+    const zipfile = new FakeZipFile();
+    openMock.mockImplementation((_zipPath, _options, cb) =>
+      cb(null, zipfile as unknown as yauzl.ZipFile),
+    );
+
+    const pending = openEntryReadStream(archivePath, "file.txt");
+    zipfile.emit("error", "zip stream failed");
+
+    await expect(pending).rejects.toThrow("zip stream failed");
+    expect(zipfile.close).toHaveBeenCalled();
+  });
+
+  it("rejects listEntries and openEntryReadStream when detectArchiveKind returns an unsupported value", async () => {
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock("../archive/format", () => ({
+        detectArchiveKind: jest.fn(() => "rar"),
+        getGzipEntryName: jest.fn(),
+      }));
+
+      const archiveModuleExports = require("../archive/archive") as typeof archiveModule;
+
+      await expect(archiveModuleExports.listEntries(archivePath)).rejects.toThrow(
+        "Unsupported archive kind: rar",
+      );
+      await expect(
+        archiveModuleExports.openEntryReadStream(archivePath, "file.txt"),
+      ).rejects.toThrow("Unsupported archive kind: rar");
+    });
   });
 });

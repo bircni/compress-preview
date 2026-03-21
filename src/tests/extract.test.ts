@@ -125,6 +125,19 @@ describe("extract", () => {
     );
   });
 
+  it("extractAll removes an existing target directory when overwrite is true", async () => {
+    const zipPath = path.join(TMP_DIR, "extract-overwrite.zip");
+    await createZip(zipPath, [{ name: "fresh.txt", content: "fresh" }]);
+    const outDir = path.join(TMP_DIR, "overwrite-out");
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, "stale.txt"), "stale");
+
+    await extractAll(zipPath, outDir, { overwrite: true });
+
+    expect(fs.existsSync(path.join(outDir, "stale.txt"))).toBe(false);
+    expect(fs.readFileSync(path.join(outDir, "fresh.txt"), "utf8")).toBe("fresh");
+  });
+
   it("extracts the fixture APK preserving nested files", async () => {
     const fixturePath = path.join(FIXTURES_DIR, "sample-app.apk");
     const outDir = path.join(TMP_DIR, "fixture-apk-out");
@@ -207,6 +220,18 @@ describe("extract", () => {
     await extractAll(gzipPath, outDir, { overwrite: true });
 
     expect(fs.readFileSync(path.join(outDir, "extract.log"), "utf8")).toBe("gzip-entry");
+  });
+
+  it("rejects when extracting an invalid gzip archive", async () => {
+    const gzipPath = path.join(TMP_DIR, "invalid.gz");
+    fs.writeFileSync(gzipPath, "not-a-valid-gzip-stream");
+    const outDir = path.join(TMP_DIR, "invalid-gz-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await expect(extractAll(gzipPath, outDir, { overwrite: true })).rejects.toThrow();
+    await expect(
+      extractEntry(gzipPath, "invalid", path.join(TMP_DIR, "invalid.txt")),
+    ).rejects.toThrow();
   });
 
   it("rejects when a gz entry name does not match", async () => {

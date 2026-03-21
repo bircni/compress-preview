@@ -21,8 +21,6 @@ const config: Config = {
   coverageReporters: ["json-summary", "json", "lcov", "text", "clover"],
   collectCoverageFrom: [
     "src/**/*.ts",
-    "!src/editor/**",
-    "!src/webview/**",
     "!**/*.test.ts",
   ],
   coverageThreshold: {

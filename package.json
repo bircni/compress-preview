@@ -77,7 +77,7 @@
   },
   "overrides": {
     "yauzl": "3.2.1",
-    "diff": "8.0.2",
+    "diff": "8.0.3",
     "serialize-javascript": "7.0.3"
   },
   "devDependencies": {
