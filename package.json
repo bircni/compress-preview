@@ -72,13 +72,12 @@
     "watch": "tsc --project tsconfig.build.json --watch"
   },
   "dependencies": {
-    "tar-stream": "^3.1.7",
-    "yauzl": "3.2.1"
+    "tar-stream": "3.1.8",
+    "yauzl": "3.3.0"
   },
   "overrides": {
-    "yauzl": "3.2.1",
-    "diff": "8.0.2",
-    "serialize-javascript": "7.0.3"
+    "diff": "8.0.4",
+    "serialize-javascript": "7.0.5"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -86,25 +85,25 @@
     "@types/archiver": "7.0.0",
     "@types/jest": "30.0.0",
     "@types/node": "25.5.0",
-    "@types/tar-stream": "^3.1.4",
+    "@types/tar-stream": "3.1.4",
     "@types/vscode": "1.105.0",
     "@types/yauzl": "2.10.3",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.7.1",
     "archiver": "7.0.1",
     "depcheck": "1.4.7",
-    "esbuild": "0.27.4",
-    "eslint": "10.0.3",
+    "esbuild": "0.27.7",
+    "eslint": "10.1.0",
     "jest": "30.3.0",
-    "jiti": "^2.6.1",
-    "jsdom": "^29.0.0",
-    "mocha": "^11.7.1",
+    "jiti": "2.6.1",
+    "jsdom": "29.0.1",
+    "mocha": "11.7.5",
     "prettier": "3.8.1",
     "rimraf": "6.1.3",
-    "ts-jest": "29.4.6",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.57.0",
-    "yazl": "^3.3.1"
+    "ts-jest": "29.4.9",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.58.0",
+    "yazl": "3.3.1"
   },
   "activationEvents": [
     "onCustomEditor:compressPreview"
