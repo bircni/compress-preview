@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { cleanupTempPreviews } from "./editor/archivePaths.js";
+import { readTempPreviewMaxAgeMs } from "./editor/compressPreviewConfig.js";
 import { registerZipContentProvider } from "./editor/zipContentProvider.js";
 import {
   clearZipEditorTestMessages,
@@ -23,13 +24,17 @@ export function activate(context: vscode.ExtensionContext): void {
   const channel = vscode.window.createOutputChannel("Compress Preview");
   context.subscriptions.push(channel);
   setOutputChannel(channel);
-  void cleanupTempPreviews();
+  void cleanupTempPreviews(readTempPreviewMaxAgeMs());
 
   registerZipContentProvider(context);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider("compressPreview", new ZipPreviewEditorProvider(), {
-      webviewOptions: { retainContextWhenHidden: true },
-    }),
+    vscode.window.registerCustomEditorProvider(
+      "compressPreview",
+      new ZipPreviewEditorProvider(context),
+      {
+        webviewOptions: { retainContextWhenHidden: true },
+      },
+    ),
   );
 
   if (shouldRegisterTestCommands()) {

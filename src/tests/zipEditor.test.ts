@@ -9,6 +9,10 @@ type ProviderHarnessOptions = {
   archivePath?: string;
   ensureArchiveExists?: boolean;
   useFakeTimers?: boolean;
+  /** Workspace `compress-preview.listTimeoutMs` (passed to `listEntries`). */
+  listTimeoutMs?: number;
+  /** Workspace `compress-preview.watchArchiveFile`. */
+  watchArchiveFile?: boolean;
   listEntriesResult?: {
     entries: {
       path: string;
@@ -85,12 +89,46 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
     | ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>)
     | undefined;
 
+  let fileWatcherChange: (() => void) | undefined;
+  const clipboardWriteText = jest.fn().mockResolvedValue(undefined);
+  const createFileSystemWatcher = jest.fn(() => ({
+    onDidChange: jest.fn((cb: () => void) => {
+      fileWatcherChange = cb;
+      return { dispose: jest.fn() };
+    }),
+    dispose: jest.fn(),
+  }));
+  const getConfiguration = jest.fn(() => ({
+    get: jest.fn((key: string, defaultValue: unknown) => {
+      if (key === "listTimeoutMs") {
+        return options.listTimeoutMs ?? defaultValue;
+      }
+      if (key === "watchArchiveFile") {
+        return options.watchArchiveFile ?? true;
+      }
+      return defaultValue;
+    }),
+  }));
+
+  const mockExtensionContext = { subscriptions: [] as unknown[] };
+
   jest.doMock(
     "vscode",
     () => ({
       Uri: {
         file: (fsPath: string) => ({ fsPath }),
         parse: (value: string) => ({ value }),
+      },
+      RelativePattern: class {
+        constructor(_base: unknown, _pattern: string) {
+          void _base;
+          void _pattern;
+        }
+      },
+      env: {
+        clipboard: {
+          writeText: clipboardWriteText,
+        },
       },
       window: {
         showTextDocument,
@@ -100,6 +138,8 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
       },
       workspace: {
         openTextDocument,
+        getConfiguration,
+        createFileSystemWatcher,
       },
       commands: {
         executeCommand,
@@ -137,7 +177,7 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
   const zipEditorExports = require("../editor/zipEditor") as typeof zipEditorModule;
   const zipEditorTestBridge =
     require("../editor/zipEditorTestBridge") as typeof zipEditorTestBridgeModule;
-  const provider = new zipEditorExports.ZipPreviewEditorProvider();
+  const provider = new zipEditorExports.ZipPreviewEditorProvider(mockExtensionContext as never);
   const document = provider.openCustomDocument({ fsPath: archivePath }, {}, {});
   const panel = {
     viewColumn: 1,
@@ -179,6 +219,12 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
     markTempPreviewUsed,
     get messageHandler() {
       return messageHandler;
+    },
+    clipboardWriteText,
+    createFileSystemWatcher,
+    getConfiguration,
+    triggerArchiveFileChange: () => {
+      fileWatcherChange?.();
     },
   };
 }
@@ -430,6 +476,45 @@ describe("ZipPreviewEditorProvider", () => {
       error: "Cancelled",
     });
     fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("uses the configured list timeout when listing entries", async () => {
+    const harness = createProviderHarness({ listTimeoutMs: 25_000 });
+    await Promise.resolve();
+
+    expect(harness.listEntries).toHaveBeenCalledWith(harness.archivePath, { timeoutMs: 25_000 });
+  });
+
+  it("reloads entries when the archive file watcher fires", async () => {
+    const harness = createProviderHarness();
+    await Promise.resolve();
+
+    expect(harness.listEntries).toHaveBeenCalledTimes(1);
+    harness.triggerArchiveFileChange();
+    await Promise.resolve();
+
+    expect(harness.listEntries).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips the file watcher when watchArchiveFile is false", async () => {
+    const harness = createProviderHarness({ watchArchiveFile: false });
+    await Promise.resolve();
+
+    expect(harness.createFileSystemWatcher).not.toHaveBeenCalled();
+  });
+
+  it("copies an entry path to the clipboard", async () => {
+    const harness = createProviderHarness();
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "copyPath", path: "docs/readme.txt" });
+
+    expect(harness.clipboardWriteText).toHaveBeenCalledWith("docs/readme.txt");
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "copyResult",
+      success: true,
+      path: "docs/readme.txt",
+    });
   });
 
   it("supports test overrides for timeout and captured messages", async () => {

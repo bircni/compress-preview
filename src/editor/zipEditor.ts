@@ -1,9 +1,11 @@
 import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import { listEntries, openEntryReadStream } from "../archive/archive";
 import { extractEntry, extractAll, extractAllTargetDir } from "../archive/extract";
 import { logger } from "../logger";
 import { getInitialHtml } from "../webview/content";
+import { readTempPreviewMaxAgeMs } from "./compressPreviewConfig.js";
 import {
   cleanupTempPreviews,
   createTempPreviewPath,
@@ -25,12 +27,27 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+function clampListTimeoutMs(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(300_000, Math.max(1_000, Math.round(value)));
+}
+
+function readListTimeoutMs(): number {
+  const config = vscode.workspace.getConfiguration("compress-preview");
+  const raw = config.get<number>("listTimeoutMs", DEFAULT_TIMEOUT_MS);
+  return clampListTimeoutMs(raw, DEFAULT_TIMEOUT_MS);
+}
+
 class ZipDocument implements vscode.CustomDocument {
   constructor(public readonly uri: vscode.Uri) {}
   dispose(): void {}
 }
 
 export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProvider<ZipDocument> {
+  constructor(private readonly context: vscode.ExtensionContext) {}
+
   openCustomDocument(
     uri: vscode.Uri,
     _openContext: vscode.CustomDocumentOpenContext,
@@ -56,7 +73,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
     const controller = createZipEditorController({
       zipPath,
       cspSource,
-      listTimeoutMs: () => getZipEditorTestListTimeoutMs(DEFAULT_TIMEOUT_MS),
+      listTimeoutMs: () => getZipEditorTestListTimeoutMs(readListTimeoutMs()),
       setHtml: (html) => {
         webviewPanel.webview.html = html;
       },
@@ -75,7 +92,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       extractEntry,
       extractAll,
       extractAllTargetDir,
-      cleanupTempPreviews,
+      cleanupTempPreviews: () => cleanupTempPreviews(readTempPreviewMaxAgeMs()),
       createTempPreviewPath,
       getEntryExtractionTarget,
       markTempPreviewUsed,
@@ -93,7 +110,28 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       onBinaryPreviewPath: (previewPath) => {
         setZipEditorTestBinaryPreviewPath(webviewPanel, previewPath);
       },
+      writeClipboardText: async (text) => {
+        await vscode.env.clipboard.writeText(text);
+      },
     });
+
+    const watchArchive = vscode.workspace
+      .getConfiguration("compress-preview")
+      .get<boolean>("watchArchiveFile", true);
+    if (watchArchive) {
+      const pattern = new vscode.RelativePattern(
+        vscode.Uri.file(path.dirname(zipPath)),
+        path.basename(zipPath),
+      );
+      const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+      const watcherSub = watcher.onDidChange(() => {
+        void controller.loadAndSetHtml();
+      });
+      webviewPanel.onDidDispose(() => {
+        watcherSub.dispose();
+        watcher.dispose();
+      });
+    }
 
     // Defer so the webview panel is mounted and ready; 100ms avoids first-set being ignored in some hosts.
     setTimeout(() => void controller.loadAndSetHtml(), 100);

@@ -87,6 +87,7 @@ export type ZipEditorControllerDeps = {
   logInfo: (message: string, payload?: Record<string, unknown>) => void;
   logError: (message: string, error: unknown) => void;
   onBinaryPreviewPath?: (previewPath: string) => void;
+  writeClipboardText: (text: string) => Promise<void>;
 };
 
 async function writeStreamToFile(
@@ -156,6 +157,22 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
     deps.logInfo("webview message received", { type: msg.type });
     if (msg.type === "getEntries" || msg.type === "retryLoad") {
       await loadAndSetHtml();
+      return;
+    }
+
+    if (msg.type === "copyPath" && msg.path) {
+      try {
+        await deps.writeClipboardText(msg.path);
+        await postMessage({ type: "copyResult", success: true, path: msg.path });
+      } catch (err) {
+        deps.logError("Copy path failed", err);
+        const message = err instanceof Error ? err.message : String(err);
+        await postMessage({
+          type: "copyResult",
+          success: false,
+          error: message,
+        });
+      }
       return;
     }
 

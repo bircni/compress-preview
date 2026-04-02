@@ -42,6 +42,11 @@ describe("extension", () => {
             createOutputChannel,
             registerCustomEditorProvider,
           },
+          workspace: {
+            getConfiguration: jest.fn(() => ({
+              get: jest.fn((_key: string, defaultValue: unknown) => defaultValue),
+            })),
+          },
           commands: {
             registerCommand,
           },
@@ -74,6 +79,7 @@ describe("extension", () => {
       expect(setOutputChannel).toHaveBeenCalledWith(channel);
       expect(registerZipContentProvider).toHaveBeenCalledWith(context);
       expect(ZipPreviewEditorProvider).toHaveBeenCalledTimes(1);
+      expect(ZipPreviewEditorProvider).toHaveBeenCalledWith(context);
       expect(registerCustomEditorProvider).toHaveBeenCalledWith(
         "compressPreview",
         providerInstance,
@@ -113,6 +119,11 @@ describe("extension", () => {
             createOutputChannel,
             registerCustomEditorProvider,
           },
+          workspace: {
+            getConfiguration: jest.fn(() => ({
+              get: jest.fn((_key: string, defaultValue: unknown) => defaultValue),
+            })),
+          },
           commands: {
             registerCommand,
           },
@@ -141,6 +152,7 @@ describe("extension", () => {
 
       activate(context as never);
 
+      expect(ZipPreviewEditorProvider).toHaveBeenCalledWith(context);
       expect(registerCommand).toHaveBeenCalledTimes(5);
       expect(registerCommand.mock.calls[0][1]()).toBe("state");
       registerCommand.mock.calls[1][1]({ type: "retryLoad" });

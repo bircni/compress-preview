@@ -17,7 +17,7 @@ Before making changes:
 
 **What This Project Does:**
 
-- VS Code extension that **previews `.zip` files** in a custom editor instead of the default binary view
+- VS Code extension that **previews archive files** (ZIP, TAR, GZIP-based, etc.—see `package.json` `customEditors`) in a custom editor instead of the default binary view
 - Lists files and folders inside the archive in a webview
 - Opens **text-based files** (e.g. `.txt`, `.json`, `.md`) read-only in the editor via a custom `compress-preview://` URI scheme
 - **Extract**: single file or “Extract all” (sibling folder named after the zip, or user-chosen path)
@@ -27,7 +27,7 @@ Before making changes:
 
 - TypeScript (strict), Node.js (see `.node-version`)
 - VS Code Extension API (custom editor, `TextDocumentContentProvider`)
-- [yauzl](https://github.com/thejoshwolfe/yauzl) for reading zip files
+- [yauzl](https://github.com/thejoshwolfe/yauzl) for ZIP-family archives; tar-stream for TAR/TGZ
 - Single webview (HTML + inline script in `src/webview/content.html`), HTML template loaded at runtime via `src/webview/content.ts`
 - Jest for tests
 - esbuild for bundling, vsce for packaging
@@ -49,7 +49,8 @@ Before making changes:
 
 **Editor and content provider:**
 
-- `editor/zipEditor.ts` – `ZipPreviewEditorProvider`: opens zip as custom document, resolves webview, loads entries into HTML, handles webview messages (`openEntry`, `extractEntry`, `extractAll`, `getEntries`, `retryLoad`)
+- `editor/zipEditor.ts` – `ZipPreviewEditorProvider`: opens an archive as a custom document, resolves webview, loads entries into HTML
+- `editor/compressPreviewConfig.ts` – reads workspace settings (e.g. temp preview max age) via `vscode.workspace.getConfiguration('compress-preview')`
 - `editor/zipContentProvider.ts` – `TextDocumentContentProvider` for `compress-preview://` URIs; `makeZipPreviewUri(zipPath, entryPath)`; streams entry content as UTF-8 text
 
 **Webview:**
@@ -139,9 +140,9 @@ npm run uninstall:debug # Uninstall extension
 
 ### 2. Custom Editor and Webview
 
-- The custom editor is registered for `*.zip` with view type `compressPreview`. Only one document type.
+- The custom editor uses view type `compressPreview` and one `selector` with many `filenamePattern` entries (`.zip`, `.tar`, `.gz`, etc.).
 - Webview HTML is set once after `listEntries` completes (with a short defer). Initial data is embedded in the page via a `<script type="application/json">` block so the first paint doesn’t depend on postMessage.
-- All host ↔ webview communication is via `webview.postMessage` / `webview.onDidReceiveMessage`. Message types: `getEntries`, `retryLoad`, `openEntry`, `extractEntry`, `extractAll`; host replies with `openResult`, `extractResult`, etc.
+- Host ↔ webview communication is via `webview.postMessage` / `webview.onDidReceiveMessage`. **From webview:** `getEntries`, `retryLoad`, `openEntry`, `copyPath`, `extractEntry`, `extractAll`. **To webview:** `loading`, `error`, `entries`, `openResult`, `copyResult`, `extractResult`, plus initial embedded JSON when present.
 
 ### 3. Archive and Extract
 
@@ -186,7 +187,12 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 ### Changing the archive list or timeout
 
 - `src/archive/archive.ts`: `listEntries`, `DEFAULT_TIMEOUT_MS`, `LOADING_INDICATOR_THRESHOLD`.
-- Editor passes `timeoutMs` from a constant; could later be a VS Code setting.
+- User-facing list timeout: `compress-preview.listTimeoutMs` in `package.json`; read in `zipEditor.ts` (with test overrides via `zipEditorTestBridge`).
+
+### Changing temp binary preview cache TTL
+
+- `src/editor/archivePaths.ts`: `cleanupTempPreviews(maxAgeMs?)`, `DEFAULT_TEMP_PREVIEW_MAX_AGE_MS`.
+- User setting: `compress-preview.tempPreviewMaxAgeDays`; `readTempPreviewMaxAgeMs()` in `compressPreviewConfig.ts`. Used on activation (`extension.ts`) and when opening binary entries (`zipEditor` passes a closure into `createZipEditorController`).
 
 ### Changing extract behavior or paths
 
@@ -198,9 +204,10 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 - `src/webview/content.ts`: `getInitialHtml`, template path resolution, initial JSON shape.
 - `src/editor/zipEditor.ts`: `onDidReceiveMessage` handler and `postMessage` replies.
 
-### Exposing a setting (e.g. list timeout)
+### Exposing a setting
 
-- Add to `package.json` under `contributes.configuration`, then read in the editor with `vscode.workspace.getConfiguration('compress-preview')` and pass into `listEntries`.
+- Add properties under `contributes.configuration` in `package.json` (keys like `compress-preview.listTimeoutMs`).
+- Read with `vscode.workspace.getConfiguration('compress-preview').get(...)` in `zipEditor.ts`, `compressPreviewConfig.ts`, or `extension.ts` as appropriate, and thread values into archive/editor calls.
 
 ## Definition of Done
 
