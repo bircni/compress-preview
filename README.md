@@ -26,43 +26,30 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 
 ## Supported Archive Formats
 
-- `.zip`
-- `.jar`
-- `.apk`
-- `.vsix`
-- `.xpi`
-- `.whl`
-- `.war`
-- `.ear`
-- `.tar`
-- `.tgz`
-- `.tar.gz`
-- `.gz`
+`.zip`, `.jar`, `.apk`, `.vsix`, `.xpi`, `.whl`, `.war`, `.ear`, `.tar`, `.tgz`, `.tar.gz`, `.gz`
 
 ## What Opens In The Editor
 
-Text-like files open directly in VS Code as read-only virtual documents, including common formats such as:
-
-- `.txt`
-- `.json`
-- `.md`
-- `.xml`
-- `.html`
-- `.css`
-- `.js`
-- `.ts`
-- `.yml`
-- `.yaml`
-- `.csv`
-- `.log`
+Text-like files open directly in VS Code as read-only virtual documents, including common formats such as:\
+`.txt`, `.json`, `.md`, `.xml`, `.html`, `.css`, `.js`, `.ts`, `.yml`, `.yaml`, `.csv`, `.log`
 
 Common binary files open through a temporary extracted preview file so they can use VS Code's normal file handling. GZIP archives expose a single decompressed file entry in the preview.
+
+## Settings
+
+Open **Settings** and search for **Compress Preview**, or edit `settings.json`:
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `compress-preview.listTimeoutMs` | `10000` | Max time (ms) to spend listing entries before showing partial results. |
+| `compress-preview.watchArchiveFile` | `true` | Reload the preview when the archive file changes on disk. |
+| `compress-preview.tempPreviewMaxAgeDays` | `7` | Days to keep cached binary previews under the OS temp folder before pruning. |
 
 ## Notes
 
 - The preview is read-only.
 - Binary previews are extracted to a temporary OS-specific cache path under `compress-preview/` before opening.
-- Cached binary previews reuse the same archive-entry path and are pruned after 7 days of inactivity.
+- Cached binary previews reuse the same archive-entry path and are pruned after the configured number of days without use.
 - Very large archives may show a partial list first, with a retry option.
 - Folder entries are shown in the archive view but cannot be opened as files.
 

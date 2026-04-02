@@ -4,7 +4,9 @@ import * as os from "os";
 import * as path from "path";
 
 const TEMP_PREVIEW_ROOT = path.join(os.tmpdir(), "compress-preview");
-const TEMP_PREVIEW_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
+
+/** Default max age (7 days) for `cleanupTempPreviews` when no value is passed. */
+export const DEFAULT_TEMP_PREVIEW_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 
 export function normalizeArchiveEntrySegments(entryPath: string): string[] {
   return entryPath
@@ -48,7 +50,9 @@ export async function markTempPreviewUsed(tempPreviewPath: string): Promise<void
   await fs.promises.utimes(archiveCacheDir, stamp, stamp);
 }
 
-export async function cleanupTempPreviews(): Promise<void> {
+export async function cleanupTempPreviews(
+  maxAgeMs: number = DEFAULT_TEMP_PREVIEW_MAX_AGE_MS,
+): Promise<void> {
   if (!fs.existsSync(TEMP_PREVIEW_ROOT)) {
     return;
   }
@@ -62,7 +66,7 @@ export async function cleanupTempPreviews(): Promise<void> {
       }
       const candidatePath = path.join(TEMP_PREVIEW_ROOT, entry.name);
       const stats = await fs.promises.stat(candidatePath);
-      if (now - stats.mtimeMs > TEMP_PREVIEW_MAX_AGE_MS) {
+      if (now - stats.mtimeMs > maxAgeMs) {
         await fs.promises.rm(candidatePath, { recursive: true, force: true });
       }
     }),

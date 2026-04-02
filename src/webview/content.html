@@ -393,6 +393,7 @@
             <div id="summary" class="summary">Waiting for archive metadata...</div>
           </div>
           <div class="buttonRow actionsCompact">
+            <button id="refreshBtn" type="button">Refresh</button>
             <button id="expandAllBtn" type="button" style="display:none;">Expand all</button>
             <button id="collapseAllBtn" type="button" style="display:none;">Collapse all</button>
             <button id="retryBtn" type="button" style="display:none;">Retry</button>
@@ -449,6 +450,7 @@
     var summaryEl = document.getElementById('summary');
     var statusTextEl = document.getElementById('statusText');
     var searchInput = document.getElementById('searchInput');
+    var refreshBtn = document.getElementById('refreshBtn');
     var filterButtons = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
 
     var allEntries = [];
@@ -710,6 +712,7 @@
       if (!isFolder) {
         actions += '<button class="rowAction" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '">Open</button>';
       }
+      actions += '<button class="rowAction" type="button" data-action="copy" data-path="' + escapeHtml(node.entry.path) + '">Copy path</button>';
       if (!node.synthetic) {
         actions += '<button class="rowAction" type="button" data-action="extract" data-path="' + escapeHtml(node.entry.path) + '">Extract</button>';
       }
@@ -868,6 +871,8 @@
           if (!vscode) return;
           if (action === 'open') {
             vscode.postMessage({ type: 'openEntry', path: targetPath });
+          } else if (action === 'copy') {
+            vscode.postMessage({ type: 'copyPath', path: targetPath });
           } else if (action === 'extract') {
             vscode.postMessage({ type: 'extractEntry', path: targetPath });
           }
@@ -954,6 +959,12 @@
 
     installControls();
 
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function() {
+        if (vscode) vscode.postMessage({ type: 'getEntries' });
+      });
+    }
+
     var hasInitialData = false;
     var initialEl = document.getElementById('initial-entries');
     if (initialEl && initialEl.textContent) {
@@ -983,6 +994,16 @@
         setError(msg.message || 'Error');
       } else if (msg.type === 'entries') {
         setEntries(msg.entries || [], msg.isPartial, msg.message);
+      } else if (msg.type === 'copyResult') {
+        if (msg.success === false && msg.error) {
+          if (partialEl) {
+            partialEl.style.display = 'block';
+            partialEl.className = 'is-error';
+            partialEl.innerHTML = escapeHtml(msg.error);
+          }
+        } else if (msg.success === true && msg.path) {
+          showResultMessage('Copied path', msg.path);
+        }
       } else if (msg.type === 'openResult' || msg.type === 'extractResult') {
         if (msg.success === false && msg.error) {
           if (partialEl) {

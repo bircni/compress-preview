@@ -4,6 +4,7 @@ import * as fs from "fs";
 import {
   cleanupTempPreviews,
   createTempPreviewPath,
+  DEFAULT_TEMP_PREVIEW_MAX_AGE_MS,
   getEntryExtractionTarget,
   markTempPreviewUsed,
   normalizeArchiveEntrySegments,
@@ -111,9 +112,26 @@ describe("archivePaths", () => {
     const oldDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 8);
     fs.utimesSync(hashDir, oldDate, oldDate);
 
-    await cleanupTempPreviews();
+    await cleanupTempPreviews(DEFAULT_TEMP_PREVIEW_MAX_AGE_MS);
 
     expect(fs.existsSync(hashDir)).toBe(false);
+    fs.rmSync(cacheRoot, { recursive: true, force: true });
+  });
+
+  it("does not remove cache folders newer than the custom max age", async () => {
+    const previewPath = createTempPreviewPath("/archives/keep.zip", "bin/file.bin");
+    const hashDir = path.dirname(path.dirname(previewPath));
+    const cacheRoot = path.dirname(hashDir);
+    fs.mkdirSync(path.dirname(previewPath), { recursive: true });
+    fs.writeFileSync(previewPath, "preview");
+
+    const oldDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 8);
+    fs.utimesSync(hashDir, oldDate, oldDate);
+
+    const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+    await cleanupTempPreviews(tenDaysMs);
+
+    expect(fs.existsSync(hashDir)).toBe(true);
     fs.rmSync(cacheRoot, { recursive: true, force: true });
   });
 
