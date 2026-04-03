@@ -36,7 +36,7 @@ function clampListTimeoutMs(value: number, fallback: number): number {
 
 function readListTimeoutMs(): number {
   const config = vscode.workspace.getConfiguration("compress-preview");
-  const raw = config.get<number>("listTimeoutMs", DEFAULT_TIMEOUT_MS);
+  const raw = config.get("listTimeoutMs", DEFAULT_TIMEOUT_MS);
   return clampListTimeoutMs(raw, DEFAULT_TIMEOUT_MS);
 }
 
@@ -45,7 +45,7 @@ class ZipDocument implements vscode.CustomDocument {
   dispose(): void {}
 }
 
-export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProvider<ZipDocument> {
+export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProvider {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   openCustomDocument(
@@ -105,8 +105,12 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
         vscode.commands.executeCommand(command, uri, options),
       showOpenDialog: createZipEditorOpenDialogHandler(),
       showWarningMessage: createZipEditorWarningMessageHandler(),
-      logInfo: (message, payload) => logger.info(message, payload),
-      logError: (message, error) => logger.error(message, error),
+      logInfo: (message, payload) => {
+        logger.info(message, payload);
+      },
+      logError: (message, error) => {
+        logger.error(message, error);
+      },
       onBinaryPreviewPath: (previewPath) => {
         setZipEditorTestBinaryPreviewPath(webviewPanel, previewPath);
       },
@@ -115,9 +119,8 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       },
     });
 
-    const watchArchive = vscode.workspace
-      .getConfiguration("compress-preview")
-      .get<boolean>("watchArchiveFile", true);
+    const watchArchive =
+      vscode.workspace.getConfiguration("compress-preview").get("watchArchiveFile") !== false;
     if (watchArchive) {
       const pattern = new vscode.RelativePattern(
         vscode.Uri.file(path.dirname(zipPath)),

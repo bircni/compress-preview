@@ -6,5 +6,5 @@
     "declaration": true,
     "emitDeclarationOnly": true
   },
-  "exclude": ["**/*.test.ts", "examples/**"]
+  "exclude": ["**/*.test.ts", "examples/**", "scripts/**", "eslint.config.ts"]
 }

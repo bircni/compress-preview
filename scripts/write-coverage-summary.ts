@@ -1,17 +1,43 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
-const rootDir = path.resolve(__dirname, "..");
+const scriptDir = path.dirname(path.resolve(process.argv[1] ?? ""));
+const rootDir = path.resolve(scriptDir, "..");
 const coverageSummaryPath = path.join(rootDir, ".tmp", "coverage", "coverage-summary.json");
 const coverageFinalPath = path.join(rootDir, ".tmp", "coverage", "coverage-final.json");
 const githubStepSummary = process.env.GITHUB_STEP_SUMMARY;
 
-function formatPercent(value) {
-  return `${Number(value).toFixed(2)}%`;
+type CoverageTotals = {
+  statements: { covered: number; total: number; pct: number };
+  branches: { covered: number; total: number; pct: number };
+  functions: { covered: number; total: number; pct: number };
+  lines: { covered: number; total: number; pct: number };
+};
+
+type CoverageSummaryFile = {
+  total: CoverageTotals;
+};
+
+type StatementMapEntry = {
+  start: { line: number };
+  end: { line: number };
+};
+
+type FileCoverage = {
+  s: Record<string, number>;
+  f: Record<string, number>;
+  b: Record<string, number[]>;
+  statementMap: Record<string, StatementMapEntry>;
+};
+
+type CoverageFinalFile = Record<string, FileCoverage>;
+
+function formatPercent(value: number): string {
+  return `${value.toFixed(2)}%`;
 }
 
-function summarizeCoverageFinal(coverageFinal) {
-  const totals = {
+function summarizeCoverageFinal(coverageFinal: CoverageFinalFile): CoverageTotals {
+  const totals: CoverageTotals = {
     statements: { covered: 0, total: 0, pct: 0 },
     branches: { covered: 0, total: 0, pct: 0 },
     functions: { covered: 0, total: 0, pct: 0 },
@@ -31,18 +57,16 @@ function summarizeCoverageFinal(coverageFinal) {
     totals.branches.total += branches.length;
     totals.branches.covered += branches.filter((count) => count > 0).length;
 
-    const lines = new Set();
+    const lines = new Set<number>();
     for (const statementLocation of Object.values(fileCoverage.statementMap)) {
-      for (
-        let line = statementLocation.start.line;
-        line <= statementLocation.end.line;
-        line += 1
-      ) {
+      for (let line = statementLocation.start.line; line <= statementLocation.end.line; line += 1) {
         lines.add(line);
       }
     }
     totals.lines.total += lines.size;
-    totals.lines.covered += lines.size * (statements.filter((count) => count > 0).length / Math.max(statements.length, 1));
+    totals.lines.covered +=
+      lines.size *
+      (statements.filter((count) => count > 0).length / Math.max(statements.length, 1));
   }
 
   for (const metric of Object.values(totals)) {
@@ -53,13 +77,17 @@ function summarizeCoverageFinal(coverageFinal) {
   return totals;
 }
 
-function main() {
-  let totals;
+function main(): void {
+  let totals: CoverageTotals;
   if (fs.existsSync(coverageSummaryPath)) {
-    const coverageSummary = JSON.parse(fs.readFileSync(coverageSummaryPath, "utf8"));
+    const coverageSummary = JSON.parse(
+      fs.readFileSync(coverageSummaryPath, "utf8"),
+    ) as CoverageSummaryFile;
     totals = coverageSummary.total;
   } else if (fs.existsSync(coverageFinalPath)) {
-    const coverageFinal = JSON.parse(fs.readFileSync(coverageFinalPath, "utf8"));
+    const coverageFinal = JSON.parse(
+      fs.readFileSync(coverageFinalPath, "utf8"),
+    ) as CoverageFinalFile;
     totals = summarizeCoverageFinal(coverageFinal);
   } else {
     throw new Error(`Coverage summary not found: ${coverageSummaryPath}`);

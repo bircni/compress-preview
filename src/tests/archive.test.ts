@@ -37,7 +37,9 @@ function createZip(zipPath: string, files: { name: string; content: string }[]):
   return new Promise((resolve, reject) => {
     const out = fs.createWriteStream(zipPath);
     const archive = archiver("zip", { zlib: { level: 0 } });
-    out.on("close", () => resolve());
+    out.on("close", () => {
+      resolve();
+    });
     archive.on("error", reject);
     archive.pipe(out);
     for (const f of files) {

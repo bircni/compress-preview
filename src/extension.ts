@@ -49,19 +49,22 @@ export function activate(context: vscode.ExtensionContext): void {
       ),
     );
     context.subscriptions.push(
-      vscode.commands.registerCommand("compressPreview.__test.setOverrides", (overrides: unknown) =>
-        setZipEditorTestOverrides((overrides ?? {}) as ZipEditorTestOverrides),
+      vscode.commands.registerCommand(
+        "compressPreview.__test.setOverrides",
+        (overrides: unknown) => {
+          setZipEditorTestOverrides((overrides ?? {}) as ZipEditorTestOverrides);
+        },
       ),
     );
     context.subscriptions.push(
-      vscode.commands.registerCommand("compressPreview.__test.clearMessages", () =>
-        clearZipEditorTestMessages(),
-      ),
+      vscode.commands.registerCommand("compressPreview.__test.clearMessages", () => {
+        clearZipEditorTestMessages();
+      }),
     );
     context.subscriptions.push(
-      vscode.commands.registerCommand("compressPreview.__test.reset", () =>
-        resetZipEditorTestState(),
-      ),
+      vscode.commands.registerCommand("compressPreview.__test.reset", () => {
+        resetZipEditorTestState();
+      }),
     );
   }
 }

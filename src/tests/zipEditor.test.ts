@@ -119,12 +119,15 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
         file: (fsPath: string) => ({ fsPath }),
         parse: (value: string) => ({ value }),
       },
-      RelativePattern: class {
-        constructor(_base: unknown, _pattern: string) {
-          void _base;
-          void _pattern;
-        }
-      },
+      // Minimal stub for vscode.RelativePattern (API expects a class-like constructor)
+      RelativePattern:
+        // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- matches VS Code's constructor-only RelativePattern
+        class {
+          constructor(_base: unknown, _pattern: string) {
+            void _base;
+            void _pattern;
+          }
+        },
       env: {
         clipboard: {
           writeText: clipboardWriteText,

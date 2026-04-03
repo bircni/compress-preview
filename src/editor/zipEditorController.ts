@@ -55,7 +55,7 @@ export type ZipEditorControllerDeps = {
   listTimeoutMs?: number | (() => number);
   setHtml: (html: string) => void;
   reveal: () => void;
-  postMessage: (message: unknown) => Thenable<boolean> | Promise<boolean> | boolean | void;
+  postMessage: (message: unknown) => Thenable<boolean> | Promise<boolean> | boolean | undefined;
   createTextPreviewUri: (zipPath: string, entryPath: string) => vscode.Uri;
   createFileUri: (fsPath: string) => vscode.Uri;
   getInitialHtml: (cspSource: string, initialData?: InitialEntriesPayload) => string;
@@ -99,7 +99,9 @@ async function writeStreamToFile(
   const writeStream = fs.createWriteStream(targetPath);
   stream.pipe(writeStream);
   await new Promise<void>((resolve, reject) => {
-    writeStream.on("finish", () => resolve());
+    writeStream.on("finish", () => {
+      resolve();
+    });
     writeStream.on("error", reject);
     stream.on("error", reject);
   });

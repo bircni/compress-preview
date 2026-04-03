@@ -70,7 +70,7 @@ Before making changes:
 ### Other Directories
 
 - `dist/` – Build output (DO NOT EDIT; generated). Includes `extension.js`, `webview/content.html`, `extension.vsix`
-- `scripts/` – Release script (`release.js`)
+- `scripts/` – Release script (`release.ts`, run via `tsx`)
 - `assets/` – Icon (`icon.svg`; package.json references `icon.png` for marketplace – add or generate PNG as needed)
 - `.fixtures/` – Test fixtures (e.g. `large-sample.zip`)
 
@@ -116,7 +116,7 @@ npm run audit          # npm audit (--audit-level high)
 **Release / install (dev):**
 
 ```bash
-npm run release        # Version, changelog (cliff), tag (see scripts/release.js)
+npm run release        # Version, changelog (cliff), tag (see scripts/release.ts)
 npm run install:debug  # Build and install .vsix into VS Code
 npm run uninstall:debug # Uninstall extension
 ```

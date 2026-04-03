@@ -1,9 +1,10 @@
-const { execFileSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
-const yauzl = require("yauzl");
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import yauzl, { type Entry } from "yauzl";
 
-const rootDir = path.resolve(__dirname, "..");
+const scriptDir = path.dirname(path.resolve(process.argv[1] ?? ""));
+const rootDir = path.resolve(scriptDir, "..");
 const zipBasedFixtures = [
   ".fixtures/sample-library.jar",
   ".fixtures/sample-app.apk",
@@ -12,11 +13,11 @@ const zipBasedFixtures = [
   ".fixtures/sample-wheel.whl",
   ".fixtures/sample-webapp.war",
   ".fixtures/sample-enterprise.ear",
-];
-const allFixtures = [...zipBasedFixtures, ".fixtures/large-sample.zip"];
+] as const;
+const allFixtures = [...zipBasedFixtures, ".fixtures/large-sample.zip"] as const;
 const expectedPngHeader = Buffer.from("89504e470d0a1a0a", "hex");
 
-function git(args) {
+function git(args: string[]): string {
   return execFileSync("git", args, {
     cwd: rootDir,
     encoding: "utf8",
@@ -24,34 +25,30 @@ function git(args) {
   }).trim();
 }
 
-function assertFileExists(relativePath) {
+function assertFileExists(relativePath: string): void {
   const absolutePath = path.join(rootDir, relativePath);
   if (!fs.existsSync(absolutePath)) {
     throw new Error(`Missing fixture: ${relativePath}`);
   }
 }
 
-function assertLfsTracked(relativePath) {
+function assertLfsTracked(relativePath: string): void {
   const attributes = git(["check-attr", "filter", "--", relativePath]);
   if (!attributes.endsWith(": lfs")) {
     throw new Error(`Fixture is not tracked by Git LFS: ${relativePath}`);
   }
 }
 
-function listZipEntries(archivePath) {
+function listZipEntries(archivePath: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
     yauzl.open(archivePath, { lazyEntries: true }, (error, zipfile) => {
       if (error) {
         reject(error);
         return;
       }
-      if (!zipfile) {
-        reject(new Error(`Failed to open archive fixture: ${archivePath}`));
-        return;
-      }
 
-      const entries = [];
-      zipfile.on("entry", (entry) => {
+      const entries: string[] = [];
+      zipfile.on("entry", (entry: Entry) => {
         entries.push(entry.fileName);
         zipfile.readEntry();
       });
@@ -59,7 +56,7 @@ function listZipEntries(archivePath) {
         zipfile.close();
         resolve(entries);
       });
-      zipfile.on("error", (entryError) => {
+      zipfile.on("error", (entryError: Error) => {
         zipfile.close();
         reject(entryError);
       });
@@ -68,29 +65,33 @@ function listZipEntries(archivePath) {
   });
 }
 
-function readZipEntry(archivePath, entryPath) {
+function readZipEntry(archivePath: string, entryPath: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     yauzl.open(archivePath, { lazyEntries: true }, (error, zipfile) => {
       if (error) {
         reject(error);
         return;
       }
-      if (!zipfile) {
-        reject(new Error(`Failed to open archive fixture: ${archivePath}`));
-        return;
-      }
 
       let settled = false;
-      const finish = (callback) => (value) => {
+      const finishResolve = (value: Buffer) => {
         if (settled) {
           return;
         }
         settled = true;
         zipfile.close();
-        callback(value);
+        resolve(value);
+      };
+      const finishReject = (reason: unknown) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        zipfile.close();
+        reject(reason instanceof Error ? reason : new Error(String(reason)));
       };
 
-      zipfile.on("entry", (entry) => {
+      zipfile.on("entry", (entry: Entry) => {
         if (entry.fileName !== entryPath) {
           zipfile.readEntry();
           return;
@@ -98,31 +99,35 @@ function readZipEntry(archivePath, entryPath) {
 
         zipfile.openReadStream(entry, (streamError, stream) => {
           if (streamError) {
-            finish(reject)(streamError);
-            return;
-          }
-          if (!stream) {
-            finish(reject)(new Error(`Missing stream for ${entryPath}`));
+            finishReject(streamError);
             return;
           }
 
-          const chunks = [];
-          stream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-          stream.on("end", () => finish(resolve)(Buffer.concat(chunks)));
-          stream.on("error", finish(reject));
+          const chunks: Buffer[] = [];
+          stream.on("data", (chunk: string | Buffer) => {
+            chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+          });
+          stream.on("end", () => {
+            finishResolve(Buffer.concat(chunks));
+          });
+          stream.on("error", (err: Error) => {
+            finishReject(err);
+          });
         });
       });
 
       zipfile.on("end", () => {
-        finish(reject)(new Error(`Missing fixture entry: ${entryPath}`));
+        finishReject(new Error(`Missing fixture entry: ${entryPath}`));
       });
-      zipfile.on("error", finish(reject));
+      zipfile.on("error", (err: Error) => {
+        finishReject(err);
+      });
       zipfile.readEntry();
     });
   });
 }
 
-async function assertZipBasedFixtureContents(relativePath) {
+async function assertZipBasedFixtureContents(relativePath: string): Promise<void> {
   const archivePath = path.join(rootDir, relativePath);
   const entries = await listZipEntries(archivePath);
 
@@ -144,7 +149,7 @@ async function assertZipBasedFixtureContents(relativePath) {
 
   const manifest = JSON.parse(
     (await readZipEntry(archivePath, "docs/manifest.json")).toString("utf8"),
-  );
+  ) as { name?: string; entry?: string };
   if (manifest.name !== "compress-preview-fixture" || manifest.entry !== "README.txt") {
     throw new Error(`Fixture ${relativePath} has unexpected docs/manifest.json contents`);
   }
@@ -160,7 +165,7 @@ async function assertZipBasedFixtureContents(relativePath) {
   }
 }
 
-async function assertLargeArchiveFixture(relativePath) {
+async function assertLargeArchiveFixture(relativePath: string): Promise<void> {
   const archivePath = path.join(rootDir, relativePath);
   const entries = await listZipEntries(archivePath);
 
@@ -181,11 +186,11 @@ async function assertLargeArchiveFixture(relativePath) {
   }
 }
 
-async function main() {
-  allFixtures.forEach((relativePath) => {
+async function main(): Promise<void> {
+  for (const relativePath of allFixtures) {
     assertFileExists(relativePath);
     assertLfsTracked(relativePath);
-  });
+  }
 
   for (const relativePath of zipBasedFixtures) {
     await assertZipBasedFixtureContents(relativePath);
@@ -193,7 +198,7 @@ async function main() {
   await assertLargeArchiveFixture(".fixtures/large-sample.zip");
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error);
   process.exitCode = 1;
 });

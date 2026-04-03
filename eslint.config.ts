@@ -1,11 +1,13 @@
 import eslint from "@eslint/js";
+import { defineConfig } from "eslint/config";
+import eslintConfigPrettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
 // ESLint flat config for VS Code extension
-export default tseslint.config(
+// strictTypeChecked = recommended + recommendedTypeChecked + strict + extra type-aware strict rules
+export default defineConfig([
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
     languageOptions: {
@@ -46,7 +48,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-return": "error",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
@@ -76,7 +78,7 @@ export default tseslint.config(
       "@typescript-eslint/no-empty-function": ["warn", { allow: ["methods"] }],
 
       // General JavaScript/TypeScript rules
-      curly: ["warn", "all"],
+      curly: ["error", "all"],
       eqeqeq: ["error", "always", { null: "ignore" }],
       "no-throw-literal": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
@@ -96,6 +98,19 @@ export default tseslint.config(
       "prefer-spread": "warn",
       "no-lonely-if": "warn",
       yoda: "warn",
+
+      // Prefer catching unknown and narrowing (aligns with strict TypeScript)
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
+
+      // Numbers/booleans in template literals are intentional (logs, markdown tables)
+      "@typescript-eslint/restrict-template-expressions": [
+        "error",
+        {
+          allowNumber: true,
+          allowBoolean: true,
+          allowNullish: true,
+        },
+      ],
     },
   },
   {
@@ -111,16 +126,15 @@ export default tseslint.config(
       "*.js",
       "**/*.js",
       "examples/**",
-      "*.config.ts",
-      "scripts/**",
+      // jest.config.ts uses its own expectations; keep it out of strict type-aware lint noise
+      "jest.config.ts",
     ],
   },
-  // Allow require() and any types in parser-remark.ts for CommonJS compatibility
+  // CLI tooling: allow console.log for user-facing output
   {
-    files: ["**/parser-remark.ts"],
+    files: ["scripts/**/*.ts"],
     rules: {
-      "@typescript-eslint/no-var-requires": "off",
-      "@typescript-eslint/no-explicit-any": "off", // Necessary for dynamic require/import pattern
+      "no-console": ["warn", { allow: ["warn", "error", "log"] }],
     },
   },
   // Ignore strict lint rules for test files - no warnings, just ignore
@@ -138,6 +152,8 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/require-await": "off",
       "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
     },
   },
-);
+  eslintConfigPrettier,
+]);
