@@ -48,7 +48,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Publish coverage summary
-        run: node scripts/write-coverage-summary.js
+        run: npm run coverage:summary
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4

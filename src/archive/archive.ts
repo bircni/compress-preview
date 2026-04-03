@@ -215,7 +215,9 @@ function listTarEntries(
       }
       entries.push(createTarEntry(header));
       stream.resume();
-      stream.on("end", () => next());
+      stream.on("end", () => {
+        next();
+      });
     });
 
     extract.on("finish", () => {
@@ -396,7 +398,9 @@ function openTarEntryReadStream(
         header.name !== `${entryPath}/`
       ) {
         stream.resume();
-        stream.on("end", () => next());
+        stream.on("end", () => {
+          next();
+        });
         return;
       }
       if (isTarDirectory(header)) {

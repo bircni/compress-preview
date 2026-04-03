@@ -175,7 +175,9 @@ function extractTarEntry(
       const normalizedPath = header.name.replace(/\\/g, "/").replace(/\/$/, "");
       if (normalizedPath !== wantPath && header.name !== entryPath) {
         stream.resume();
-        stream.on("end", () => next());
+        stream.on("end", () => {
+          next();
+        });
         return;
       }
       if (header.type === "directory" || header.name.endsWith("/")) {
@@ -362,11 +364,15 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
               }
               const writeStream = fs.createWriteStream(destPath);
               readStream.pipe(writeStream);
-              writeStream.on("finish", () => onDone());
-              writeStream.on("error", (error) => onDone(error));
-              readStream.on("error", (error) =>
-                onDone(error instanceof Error ? error : new Error(String(error))),
-              );
+              writeStream.on("finish", () => {
+                onDone();
+              });
+              writeStream.on("error", (error) => {
+                onDone(error);
+              });
+              readStream.on("error", (error) => {
+                onDone(error instanceof Error ? error : new Error(String(error)));
+              });
             },
           );
         });
@@ -421,14 +427,18 @@ function extractAllTar(
       if (header.type === "directory" || header.name.endsWith("/")) {
         fs.mkdirSync(destPath, { recursive: true });
         stream.resume();
-        stream.on("end", () => next());
+        stream.on("end", () => {
+          next();
+        });
         return;
       }
 
       fs.mkdirSync(path.dirname(destPath), { recursive: true });
       const writeStream = fs.createWriteStream(destPath);
       stream.pipe(writeStream);
-      writeStream.on("finish", () => next());
+      writeStream.on("finish", () => {
+        next();
+      });
       writeStream.on("error", finishWithError);
       stream.on("error", finishWithError);
     });

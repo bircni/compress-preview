@@ -89,7 +89,9 @@ describe("extension", () => {
       );
       expect(registerCommand).not.toHaveBeenCalled();
       expect(context.subscriptions).toEqual([channel, registration]);
-      expect(() => deactivate()).not.toThrow();
+      expect(() => {
+        deactivate();
+      }).not.toThrow();
     });
   });
 

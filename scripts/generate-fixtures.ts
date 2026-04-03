@@ -1,8 +1,9 @@
-const fs = require("fs");
-const path = require("path");
-const yazl = require("yazl");
+import fs from "node:fs";
+import path from "node:path";
+import yazl from "yazl";
 
-const rootDir = path.resolve(__dirname, "..");
+const scriptDir = path.dirname(path.resolve(process.argv[1] ?? ""));
+const rootDir = path.resolve(scriptDir, "..");
 const fixturesDir = path.join(rootDir, ".fixtures");
 const tempDir = path.join(rootDir, ".tmp", "archive-fixture-src");
 const FIXTURE_DATE = new Date("2024-01-01T00:00:00.000Z");
@@ -15,9 +16,11 @@ const zipBasedFixtures = [
   "sample-wheel.whl",
   "sample-webapp.war",
   "sample-enterprise.ear",
-];
+] as const;
 
-function collectFiles(dir, rootDirForNames) {
+type CollectedFile = { absolutePath: string; archivePath: string };
+
+function collectFiles(dir: string, rootDirForNames: string): CollectedFile[] {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -36,14 +39,16 @@ function collectFiles(dir, rootDirForNames) {
     });
 }
 
-async function writeZipArchive(targetFile, sourceDir) {
+async function writeZipArchive(targetFile: string, sourceDir: string): Promise<void> {
   const files = collectFiles(sourceDir, sourceDir);
 
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const zipFile = new yazl.ZipFile();
     const output = fs.createWriteStream(targetFile);
 
-    output.on("close", resolve);
+    output.on("close", () => {
+      resolve();
+    });
     output.on("error", reject);
     zipFile.outputStream.on("error", reject).pipe(output);
 
@@ -60,7 +65,7 @@ async function writeZipArchive(targetFile, sourceDir) {
   });
 }
 
-async function main() {
+async function main(): Promise<void> {
   fs.rmSync(tempDir, { recursive: true, force: true });
   fs.mkdirSync(path.join(tempDir, "docs"), { recursive: true });
   fs.mkdirSync(path.join(tempDir, "assets"), { recursive: true });
@@ -95,7 +100,7 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error);
   process.exitCode = 1;
 });
