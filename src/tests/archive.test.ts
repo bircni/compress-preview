@@ -7,6 +7,7 @@ import * as path from "path";
 import * as os from "os";
 import archiver from "archiver";
 import tar from "tar-stream";
+import yazl from "yazl";
 import * as zlib from "zlib";
 import {
   listEntries,
@@ -46,6 +47,27 @@ function createZip(zipPath: string, files: { name: string; content: string }[]):
       archive.append(f.content, { name: f.name });
     }
     archive.finalize();
+  });
+}
+
+/** yauzl-compatible ZIPs for stream tests (archiver output can hang yauzl lazy entry reads). */
+function createZipWithYazl(
+  zipPath: string,
+  files: { name: string; content: string }[],
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const zipfile = new yazl.ZipFile();
+    for (const f of files) {
+      zipfile.addBuffer(Buffer.from(f.content, "utf8"), f.name);
+    }
+    const out = fs.createWriteStream(zipPath);
+    zipfile.outputStream.on("error", reject);
+    out.on("error", reject);
+    out.on("close", () => {
+      resolve();
+    });
+    zipfile.outputStream.pipe(out);
+    zipfile.end();
   });
 }
 
@@ -132,10 +154,9 @@ describe("archive", () => {
     expect(size).toBeGreaterThan(0);
   });
 
-  it.skip("openEntryReadStream returns stream for entry", async () => {
-    // Skip: entry path matching with archiver-created zips can hang; covered by CLI open-entry contract
+  it("openEntryReadStream returns stream for entry", async () => {
     const zipPath = path.join(TMP_DIR, "stream-test.zip");
-    await createZip(zipPath, [{ name: "content.txt", content: "stream content" }]);
+    await createZipWithYazl(zipPath, [{ name: "content.txt", content: "stream content" }]);
     const result = await listEntries(zipPath);
     expect(result.entries.length).toBeGreaterThanOrEqual(1);
     const entryPath = result.entries.find((e) => !e.isDirectory)?.path ?? "content.txt";

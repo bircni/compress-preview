@@ -1,5 +1,6 @@
 import type { Config } from "jest";
 
+/** On Node 25+, optional: `NODE_OPTIONS=--no-experimental-webstorage` silences Web Storage warnings during runs. */
 const config: Config = {
   preset: "ts-jest",
   testEnvironment: "node",
