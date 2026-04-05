@@ -1,2 +1,2 @@
-ignores: ["rimraf", "depcheck", "vscode"]
+ignores: ["rimraf", "depcheck", "vscode", "@vitest/coverage-v8"]
 skip-missing: true

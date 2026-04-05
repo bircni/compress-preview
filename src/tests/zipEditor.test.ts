@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { PassThrough } from "stream";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as zipEditorModule from "../editor/zipEditor";
 import type * as zipEditorTestBridgeModule from "../editor/zipEditorTestBridge";
 
@@ -31,11 +32,11 @@ type ProviderHarnessOptions = {
   showWarningMessageResult?: string | undefined;
 };
 
-function createProviderHarness(options: ProviderHarnessOptions = {}) {
+async function createProviderHarness(options: ProviderHarnessOptions = {}) {
   if (options.useFakeTimers ?? true) {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   } else {
-    jest.useRealTimers();
+    vi.useRealTimers();
   }
 
   const archivePath =
@@ -47,26 +48,26 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
     fs.writeFileSync(archivePath, "fixture");
   }
 
-  const executeCommand = jest.fn().mockResolvedValue(undefined);
-  const showTextDocument = jest.fn().mockResolvedValue(undefined);
+  const executeCommand = vi.fn().mockResolvedValue(undefined);
+  const showTextDocument = vi.fn().mockResolvedValue(undefined);
   const openTextDocument = options.openTextDocumentError
-    ? jest.fn().mockRejectedValue(options.openTextDocumentError)
-    : jest.fn().mockResolvedValue({ uri: { scheme: "compress-preview" } });
-  const createOutputChannel = jest.fn();
-  const showOpenDialog = jest.fn().mockResolvedValue(options.showOpenDialogResult);
-  const showWarningMessage = jest.fn().mockResolvedValue(options.showWarningMessageResult);
-  const postMessage = jest.fn().mockResolvedValue(true);
-  const reveal = jest.fn();
+    ? vi.fn().mockRejectedValue(options.openTextDocumentError)
+    : vi.fn().mockResolvedValue({ uri: { scheme: "compress-preview" } });
+  const createOutputChannel = vi.fn();
+  const showOpenDialog = vi.fn().mockResolvedValue(options.showOpenDialogResult);
+  const showWarningMessage = vi.fn().mockResolvedValue(options.showWarningMessageResult);
+  const postMessage = vi.fn().mockResolvedValue(true);
+  const reveal = vi.fn();
   const listEntries = options.listEntriesError
-    ? jest.fn().mockRejectedValue(options.listEntriesError)
-    : jest.fn().mockResolvedValue(
+    ? vi.fn().mockRejectedValue(options.listEntriesError)
+    : vi.fn().mockResolvedValue(
         options.listEntriesResult ?? {
           entries: [],
           isPartial: false,
           sizeBytes: 0,
         },
       );
-  const openEntryReadStream = jest.fn().mockImplementation(async () => {
+  const openEntryReadStream = vi.fn().mockImplementation(async () => {
     const stream = new PassThrough();
     queueMicrotask(() => stream.end(Buffer.from([0x89, 0x50, 0x4e, 0x47])));
     return {
@@ -78,28 +79,28 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
       stream,
     };
   });
-  const extractEntry = jest.fn().mockResolvedValue(undefined);
-  const extractAll = jest.fn().mockResolvedValue(undefined);
-  const extractAllTargetDir = jest
+  const extractEntry = vi.fn().mockResolvedValue(undefined);
+  const extractAll = vi.fn().mockResolvedValue(undefined);
+  const extractAllTargetDir = vi
     .fn()
     .mockReturnValue(path.join(path.dirname(archivePath), path.basename(archivePath, ".zip")));
-  const markTempPreviewUsed = jest.fn().mockResolvedValue(undefined);
+  const markTempPreviewUsed = vi.fn().mockResolvedValue(undefined);
 
   let messageHandler:
     | ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>)
     | undefined;
 
   let fileWatcherChange: (() => void) | undefined;
-  const clipboardWriteText = jest.fn().mockResolvedValue(undefined);
-  const createFileSystemWatcher = jest.fn(() => ({
-    onDidChange: jest.fn((cb: () => void) => {
+  const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
+  const createFileSystemWatcher = vi.fn(() => ({
+    onDidChange: vi.fn((cb: () => void) => {
       fileWatcherChange = cb;
-      return { dispose: jest.fn() };
+      return { dispose: vi.fn() };
     }),
-    dispose: jest.fn(),
+    dispose: vi.fn(),
   }));
-  const getConfiguration = jest.fn(() => ({
-    get: jest.fn((key: string, defaultValue: unknown) => {
+  const getConfiguration = vi.fn(() => ({
+    get: vi.fn((key: string, defaultValue: unknown) => {
       if (key === "listTimeoutMs") {
         return options.listTimeoutMs ?? defaultValue;
       }
@@ -112,7 +113,7 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
 
   const mockExtensionContext = { subscriptions: [] as unknown[] };
 
-  jest.doMock(
+  vi.doMock(
     "vscode",
     () => ({
       Uri: {
@@ -150,42 +151,42 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
     }),
     { virtual: true },
   );
-  jest.doMock("../archive/archive", () => ({
+  vi.doMock("../archive/archive", () => ({
     listEntries,
     openEntryReadStream,
   }));
-  jest.doMock("../archive/extract", () => ({
+  vi.doMock("../archive/extract", () => ({
     extractEntry,
     extractAll,
     extractAllTargetDir,
   }));
-  jest.doMock("../editor/archivePaths", () => ({
-    cleanupTempPreviews: jest.fn().mockResolvedValue(undefined),
-    createTempPreviewPath: jest.fn().mockImplementation((zipPath: string, entryPath: string) => {
+  vi.doMock("../editor/archivePaths", () => ({
+    cleanupTempPreviews: vi.fn().mockResolvedValue(undefined),
+    createTempPreviewPath: vi.fn().mockImplementation((zipPath: string, entryPath: string) => {
       return path.join(os.tmpdir(), "compress-preview", path.basename(zipPath), entryPath);
     }),
-    getEntryExtractionTarget: jest
+    getEntryExtractionTarget: vi
       .fn()
       .mockImplementation((baseDir: string, entryPath: string) => path.join(baseDir, entryPath)),
     markTempPreviewUsed,
-    shouldReuseTempPreview: jest.fn().mockReturnValue(options.shouldReuseTempPreview ?? false),
+    shouldReuseTempPreview: vi.fn().mockReturnValue(options.shouldReuseTempPreview ?? false),
   }));
-  jest.doMock("../logger", () => ({
+  vi.doMock("../logger", () => ({
     logger: {
-      info: jest.fn(),
-      error: jest.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
     },
   }));
 
-  const zipEditorExports = require("../editor/zipEditor") as typeof zipEditorModule;
+  const zipEditorExports = (await import("../editor/zipEditor")) as typeof zipEditorModule;
   const zipEditorTestBridge =
-    require("../editor/zipEditorTestBridge") as typeof zipEditorTestBridgeModule;
+    (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
   const provider = new zipEditorExports.ZipPreviewEditorProvider(mockExtensionContext as never);
   const document = provider.openCustomDocument({ fsPath: archivePath }, {}, {});
   const panel = {
     viewColumn: 1,
     reveal,
-    onDidDispose: jest.fn(),
+    onDidDispose: vi.fn(),
     webview: {
       cspSource: "vscode-webview:",
       html: "",
@@ -193,14 +194,14 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
       postMessage,
       onDidReceiveMessage: (handler: typeof messageHandler) => {
         messageHandler = handler;
-        return { dispose: jest.fn() };
+        return { dispose: vi.fn() };
       },
     },
   };
 
   provider.resolveCustomEditor(document, panel as never, {});
   if (options.useFakeTimers ?? true) {
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
   }
 
   return {
@@ -234,23 +235,23 @@ function createProviderHarness(options: ProviderHarnessOptions = {}) {
 
 describe("ZipPreviewEditorProvider", () => {
   afterEach(() => {
-    jest.useRealTimers();
-    jest.resetModules();
-    jest.restoreAllMocks();
-    jest.clearAllMocks();
+    vi.useRealTimers();
+    vi.resetModules();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("renders a file-not-found error when the archive is missing", async () => {
     const archivePath = path.join(os.tmpdir(), `missing-${Date.now()}.zip`);
     fs.rmSync(archivePath, { force: true });
-    const harness = createProviderHarness({ archivePath, ensureArchiveExists: false });
+    const harness = await createProviderHarness({ archivePath, ensureArchiveExists: false });
     await Promise.resolve();
 
     expect(harness.panel.webview.html).toContain("File not found.");
   });
 
   it("renders a listEntries failure in the initial HTML", async () => {
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       listEntriesError: new Error("boom"),
     });
     await Promise.resolve();
@@ -259,7 +260,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("reloads entries when the webview requests getEntries or retryLoad", async () => {
-    const harness = createProviderHarness();
+    const harness = await createProviderHarness();
     await Promise.resolve();
 
     expect(harness.listEntries).toHaveBeenCalledTimes(1);
@@ -270,7 +271,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("opens text entries through the virtual document provider", async () => {
-    const harness = createProviderHarness();
+    const harness = await createProviderHarness();
     await Promise.resolve();
 
     await harness.messageHandler?.({ type: "openEntry", path: "docs/readme.txt" });
@@ -288,7 +289,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("reports an openEntry failure back to the webview", async () => {
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       openTextDocumentError: new Error("open failed"),
     });
     await Promise.resolve();
@@ -303,7 +304,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("opens binary entries from a temp preview file", async () => {
-    const harness = createProviderHarness({ useFakeTimers: false });
+    const harness = await createProviderHarness({ useFakeTimers: false });
     await new Promise((resolve) => setTimeout(resolve, 120));
 
     await harness.messageHandler?.({ type: "openEntry", path: "images/logo.png" });
@@ -319,7 +320,10 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("reuses binary temp previews when the cached file is fresh", async () => {
-    const harness = createProviderHarness({ shouldReuseTempPreview: true, useFakeTimers: false });
+    const harness = await createProviderHarness({
+      shouldReuseTempPreview: true,
+      useFakeTimers: false,
+    });
     await new Promise((resolve) => setTimeout(resolve, 120));
 
     await harness.messageHandler?.({ type: "openEntry", path: "images/logo.png" });
@@ -336,7 +340,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("preserves nested paths when extracting a single entry", async () => {
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       showOpenDialogResult: [{ fsPath: "/tmp/target" }],
     });
     await Promise.resolve();
@@ -351,7 +355,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("reports extractEntry cancellation when no target is selected", async () => {
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       showOpenDialogResult: undefined,
     });
     await Promise.resolve();
@@ -366,7 +370,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("reports extractEntry failures back to the webview", async () => {
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       showOpenDialogResult: [{ fsPath: "/tmp/target" }],
     });
     harness.extractEntry.mockRejectedValueOnce(new Error("extract failed"));
@@ -382,7 +386,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("extracts all to the default sibling directory when it does not exist", async () => {
-    const harness = createProviderHarness();
+    const harness = await createProviderHarness();
     await Promise.resolve();
 
     await harness.messageHandler?.({ type: "extractAll" });
@@ -399,7 +403,7 @@ describe("ZipPreviewEditorProvider", () => {
     const archivePath = path.join(tempDir, "sample.zip");
     fs.writeFileSync(archivePath, "zip");
     fs.mkdirSync(path.join(tempDir, "sample"), { recursive: true });
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       archivePath,
       showWarningMessageResult: "Overwrite",
     });
@@ -421,7 +425,7 @@ describe("ZipPreviewEditorProvider", () => {
     fs.writeFileSync(archivePath, "zip");
     fs.mkdirSync(targetDir, { recursive: true });
     fs.mkdirSync(path.join(parentDir, "sample"), { recursive: true });
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       archivePath,
       showWarningMessageResult: "Choose other folder",
       showOpenDialogResult: [{ fsPath: parentDir }],
@@ -441,7 +445,7 @@ describe("ZipPreviewEditorProvider", () => {
     const archivePath = path.join(tempDir, "sample.zip");
     fs.writeFileSync(archivePath, "zip");
     fs.mkdirSync(path.join(tempDir, "sample"), { recursive: true });
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       archivePath,
       showWarningMessageResult: "Choose other folder",
       showOpenDialogResult: undefined,
@@ -464,7 +468,7 @@ describe("ZipPreviewEditorProvider", () => {
     const archivePath = path.join(tempDir, "sample.zip");
     fs.writeFileSync(archivePath, "zip");
     fs.mkdirSync(path.join(tempDir, "sample"), { recursive: true });
-    const harness = createProviderHarness({
+    const harness = await createProviderHarness({
       archivePath,
       showWarningMessageResult: "Cancel",
     });
@@ -482,14 +486,14 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("uses the configured list timeout when listing entries", async () => {
-    const harness = createProviderHarness({ listTimeoutMs: 25_000 });
+    const harness = await createProviderHarness({ listTimeoutMs: 25_000 });
     await Promise.resolve();
 
     expect(harness.listEntries).toHaveBeenCalledWith(harness.archivePath, { timeoutMs: 25_000 });
   });
 
   it("reloads entries when the archive file watcher fires", async () => {
-    const harness = createProviderHarness();
+    const harness = await createProviderHarness();
     await Promise.resolve();
 
     expect(harness.listEntries).toHaveBeenCalledTimes(1);
@@ -500,14 +504,14 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("skips the file watcher when watchArchiveFile is false", async () => {
-    const harness = createProviderHarness({ watchArchiveFile: false });
+    const harness = await createProviderHarness({ watchArchiveFile: false });
     await Promise.resolve();
 
     expect(harness.createFileSystemWatcher).not.toHaveBeenCalled();
   });
 
   it("copies an entry path to the clipboard", async () => {
-    const harness = createProviderHarness();
+    const harness = await createProviderHarness();
     await Promise.resolve();
 
     await harness.messageHandler?.({ type: "copyPath", path: "docs/readme.txt" });
@@ -521,7 +525,7 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("supports test overrides for timeout and captured messages", async () => {
-    const harness = createProviderHarness();
+    const harness = await createProviderHarness();
     await Promise.resolve();
 
     harness.zipEditorTestBridge.setZipEditorTestOverrides({ listTimeoutMs: 1 });

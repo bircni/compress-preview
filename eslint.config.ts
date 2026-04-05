@@ -126,8 +126,8 @@ export default defineConfig([
       "*.js",
       "**/*.js",
       "examples/**",
-      // jest.config.ts uses its own expectations; keep it out of strict type-aware lint noise
-      "jest.config.ts",
+      // vitest.config.ts uses its own expectations; keep it out of strict type-aware lint noise
+      "vitest.config.ts",
     ],
   },
   // CLI tooling: allow console.log for user-facing output

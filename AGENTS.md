@@ -29,7 +29,7 @@ Before making changes:
 - VS Code Extension API (custom editor, `TextDocumentContentProvider`)
 - [yauzl](https://github.com/thejoshwolfe/yauzl) for ZIP-family archives; tar-stream for TAR/TGZ
 - Single webview (HTML + inline script in `src/webview/content.html`), HTML template loaded at runtime via `src/webview/content.ts`
-- Jest for tests
+- Vitest for tests
 - esbuild for bundling, vsce for packaging
 - ESLint, Prettier
 

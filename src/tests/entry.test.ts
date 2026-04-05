@@ -2,6 +2,7 @@
  * Unit tests for src/archive/entry.ts — entry metadata and name helper.
  */
 
+import { describe, expect, it } from "vitest";
 import { entryNameFromPath } from "../archive/entry";
 
 describe("entry", () => {

@@ -1,4 +1,5 @@
 import { Script } from "node:vm";
+import { describe, expect, it, vi } from "vitest";
 import { getInitialHtml } from "../webview/content";
 import type * as webviewContentModule from "../webview/content";
 
@@ -67,17 +68,16 @@ describe("getInitialHtml", () => {
     expect(html).not.toContain("</script><div>boom</div>");
   });
 
-  it("throws when the webview template cannot be found", () => {
-    jest.isolateModules(() => {
-      jest.doMock("fs", () => ({
-        existsSync: jest.fn(() => false),
-        readFileSync: jest.fn(),
-      }));
+  it("throws when the webview template cannot be found", async () => {
+    vi.resetModules();
+    vi.doMock("fs", () => ({
+      existsSync: vi.fn(() => false),
+      readFileSync: vi.fn(),
+    }));
 
-      const { getInitialHtml: missingTemplateHtml } =
-        require("../webview/content") as typeof webviewContentModule;
+    const { getInitialHtml: missingTemplateHtml } =
+      (await import("../webview/content")) as typeof webviewContentModule;
 
-      expect(() => missingTemplateHtml("vscode-webview:")).toThrow("Missing webview template");
-    });
+    expect(() => missingTemplateHtml("vscode-webview:")).toThrow("Missing webview template");
   });
 });

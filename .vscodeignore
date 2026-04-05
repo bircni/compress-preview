@@ -6,7 +6,7 @@ src/**
 .npmignore
 tsconfig.json
 tsconfig.build.json
-jest.config.ts
+vitest.config.ts
 eslint.config.ts
 *.map
 **/*.map
