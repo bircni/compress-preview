@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { buildArchiveTree } from "../webview/treeModel";
 
 describe("buildArchiveTree", () => {

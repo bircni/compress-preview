@@ -3,17 +3,17 @@ import * as fs from "fs";
 import * as path from "path";
 import { PassThrough } from "stream";
 import * as yauzl from "yauzl";
+import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 import { listEntries, openEntryReadStream } from "../archive/archive";
-import type * as archiveModule from "../archive/archive";
 
-jest.mock("yauzl", () => ({
-  open: jest.fn(),
+vi.mock("yauzl", () => ({
+  open: vi.fn(),
 }));
 
 class FakeZipFile extends EventEmitter {
-  close = jest.fn();
-  readEntry = jest.fn();
-  openReadStream = jest.fn();
+  close = vi.fn();
+  readEntry = vi.fn();
+  openReadStream = vi.fn();
 }
 
 function makeEntry(fileName: string, overrides: Partial<yauzl.Entry> = {}): yauzl.Entry {
@@ -27,7 +27,7 @@ function makeEntry(fileName: string, overrides: Partial<yauzl.Entry> = {}): yauz
 }
 
 describe("archive mocked branches", () => {
-  const openMock = yauzl.open as jest.MockedFunction<typeof yauzl.open>;
+  const openMock = yauzl.open as MockedFunction<typeof yauzl.open>;
   const archivePath = path.join(process.cwd(), ".tmp", "mock-archive.zip");
 
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe("archive mocked branches", () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     fs.rmSync(archivePath, { force: true });
   });
 
@@ -80,7 +80,7 @@ describe("archive mocked branches", () => {
   });
 
   it("ignores timeout and late zip events after listEntries has already settled", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const zipfile = new FakeZipFile();
     openMock.mockImplementation((_zipPath, _options, cb) =>
       cb(null, zipfile as unknown as yauzl.ZipFile),
@@ -92,7 +92,7 @@ describe("archive mocked branches", () => {
     const result = await pending;
 
     expect(result.isPartial).toBe(false);
-    jest.advanceTimersByTime(10);
+    vi.advanceTimersByTime(10);
     expect(zipfile.close).not.toHaveBeenCalled();
 
     zipfile.emit("entry", makeEntry("late.txt"));
@@ -224,20 +224,19 @@ describe("archive mocked branches", () => {
   });
 
   it("rejects listEntries and openEntryReadStream when detectArchiveKind returns an unsupported value", async () => {
-    await jest.isolateModulesAsync(async () => {
-      jest.doMock("../archive/format", () => ({
-        detectArchiveKind: jest.fn(() => "rar"),
-        getGzipEntryName: jest.fn(),
-      }));
+    vi.resetModules();
+    vi.doMock("../archive/format", () => ({
+      detectArchiveKind: vi.fn(() => "rar"),
+      getGzipEntryName: vi.fn(),
+    }));
 
-      const archiveModuleExports = require("../archive/archive") as typeof archiveModule;
+    const archiveModuleExports = await import("../archive/archive");
 
-      await expect(archiveModuleExports.listEntries(archivePath)).rejects.toThrow(
-        "Unsupported archive kind: rar",
-      );
-      await expect(
-        archiveModuleExports.openEntryReadStream(archivePath, "file.txt"),
-      ).rejects.toThrow("Unsupported archive kind: rar");
-    });
+    await expect(archiveModuleExports.listEntries(archivePath)).rejects.toThrow(
+      "Unsupported archive kind: rar",
+    );
+    await expect(archiveModuleExports.openEntryReadStream(archivePath, "file.txt")).rejects.toThrow(
+      "Unsupported archive kind: rar",
+    );
   });
 });

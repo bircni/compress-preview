@@ -2,6 +2,7 @@
  * Unit tests for src/archive/extract.ts — extract single, extract all, target dir.
  */
 
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import archiver from "archiver";

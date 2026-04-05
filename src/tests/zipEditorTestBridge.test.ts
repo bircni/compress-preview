@@ -1,17 +1,18 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as zipEditorTestBridgeModule from "../editor/zipEditorTestBridge";
 
 describe("zipEditorTestBridge", () => {
   afterEach(() => {
-    jest.resetModules();
-    jest.restoreAllMocks();
-    jest.clearAllMocks();
+    vi.resetModules();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("applies timeout overrides and tracks active session state", async () => {
-    const showOpenDialog = jest.fn();
-    const showWarningMessage = jest.fn();
+    const showOpenDialog = vi.fn();
+    const showWarningMessage = vi.fn();
 
-    jest.doMock(
+    vi.doMock(
       "vscode",
       () => ({
         Uri: {
@@ -25,8 +26,9 @@ describe("zipEditorTestBridge", () => {
       { virtual: true },
     );
 
-    const bridge = require("../editor/zipEditorTestBridge") as typeof zipEditorTestBridgeModule;
-    const handleMessage = jest.fn().mockResolvedValue(undefined);
+    const bridge =
+      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
+    const handleMessage = vi.fn().mockResolvedValue(undefined);
 
     expect(bridge.getZipEditorTestListTimeoutMs(10_000)).toBe(10_000);
     bridge.setZipEditorTestOverrides({ listTimeoutMs: 1 });
@@ -62,10 +64,10 @@ describe("zipEditorTestBridge", () => {
   });
 
   it("uses dialog overrides before falling back to vscode", async () => {
-    const showOpenDialog = jest.fn().mockResolvedValue([{ fsPath: "/tmp/from-vscode" }]);
-    const showWarningMessage = jest.fn().mockResolvedValue("Overwrite");
+    const showOpenDialog = vi.fn().mockResolvedValue([{ fsPath: "/tmp/from-vscode" }]);
+    const showWarningMessage = vi.fn().mockResolvedValue("Overwrite");
 
-    jest.doMock(
+    vi.doMock(
       "vscode",
       () => ({
         Uri: {
@@ -79,7 +81,8 @@ describe("zipEditorTestBridge", () => {
       { virtual: true },
     );
 
-    const bridge = require("../editor/zipEditorTestBridge") as typeof zipEditorTestBridgeModule;
+    const bridge =
+      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
 
     bridge.setZipEditorTestOverrides({
       nextOpenDialogPaths: ["/tmp/override"],
@@ -101,21 +104,22 @@ describe("zipEditorTestBridge", () => {
   });
 
   it("resets overrides and rejects dispatch without an active session", async () => {
-    jest.doMock(
+    vi.doMock(
       "vscode",
       () => ({
         Uri: {
           file: (fsPath: string) => ({ fsPath }),
         },
         window: {
-          showOpenDialog: jest.fn(),
-          showWarningMessage: jest.fn(),
+          showOpenDialog: vi.fn(),
+          showWarningMessage: vi.fn(),
         },
       }),
       { virtual: true },
     );
 
-    const bridge = require("../editor/zipEditorTestBridge") as typeof zipEditorTestBridgeModule;
+    const bridge =
+      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
 
     bridge.setZipEditorTestOverrides({
       listTimeoutMs: 1,

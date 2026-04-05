@@ -3,17 +3,17 @@ import * as fs from "fs";
 import * as path from "path";
 import { PassThrough } from "stream";
 import * as yauzl from "yauzl";
+import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 import { extractAll, extractEntry } from "../archive/extract";
-import type * as extractModule from "../archive/extract";
 
-jest.mock("yauzl", () => ({
-  open: jest.fn(),
+vi.mock("yauzl", () => ({
+  open: vi.fn(),
 }));
 
 class FakeZipFile extends EventEmitter {
-  close = jest.fn();
-  readEntry = jest.fn();
-  openReadStream = jest.fn();
+  close = vi.fn();
+  readEntry = vi.fn();
+  openReadStream = vi.fn();
 }
 
 function makeEntry(fileName: string): yauzl.Entry {
@@ -26,7 +26,7 @@ function makeEntry(fileName: string): yauzl.Entry {
 }
 
 describe("extract mocked branches", () => {
-  const openMock = yauzl.open as jest.MockedFunction<typeof yauzl.open>;
+  const openMock = yauzl.open as MockedFunction<typeof yauzl.open>;
   const tmpDir = path.join(process.cwd(), ".tmp/mock-extract");
 
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe("extract mocked branches", () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -199,23 +199,22 @@ describe("extract mocked branches", () => {
   });
 
   it("rejects extractAll and extractEntry when detectArchiveKind returns an unsupported value", async () => {
-    await jest.isolateModulesAsync(async () => {
-      jest.doMock("../archive/format", () => ({
-        detectArchiveKind: jest.fn(() => "rar"),
-        getGzipEntryName: jest.fn(),
-        stripSupportedArchiveExtension: jest.fn((value: string) => value),
-      }));
+    vi.resetModules();
+    vi.doMock("../archive/format", () => ({
+      detectArchiveKind: vi.fn(() => "rar"),
+      getGzipEntryName: vi.fn(),
+      stripSupportedArchiveExtension: vi.fn((value: string) => value),
+    }));
 
-      const extractModuleExports = require("../archive/extract") as typeof extractModule;
+    const extractModuleExports = await import("../archive/extract");
 
-      await expect(
-        extractModuleExports.extractEntry("archive.rar", "file.txt", path.join(tmpDir, "out.txt")),
-      ).rejects.toThrow("Unsupported archive kind: rar");
-      await expect(
-        extractModuleExports.extractAll("archive.rar", path.join(tmpDir, "out"), {
-          overwrite: true,
-        }),
-      ).rejects.toThrow("Unsupported archive kind: rar");
-    });
+    await expect(
+      extractModuleExports.extractEntry("archive.rar", "file.txt", path.join(tmpDir, "out.txt")),
+    ).rejects.toThrow("Unsupported archive kind: rar");
+    await expect(
+      extractModuleExports.extractAll("archive.rar", path.join(tmpDir, "out"), {
+        overwrite: true,
+      }),
+    ).rejects.toThrow("Unsupported archive kind: rar");
   });
 });
