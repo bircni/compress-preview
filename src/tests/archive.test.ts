@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import archiver from "archiver";
+import * as archiver from "archiver";
 import tar from "tar-stream";
 import yazl from "yazl";
 import * as zlib from "zlib";
@@ -35,10 +35,21 @@ type TarFixtureEntry = {
   type?: tar.Headers["type"];
 };
 
+type ZipArchive = {
+  append(source: string, data: { name: string }): void;
+  finalize(): Promise<void>;
+  on(event: "error", listener: (error: Error) => void): void;
+  pipe(destination: fs.WriteStream): void;
+};
+
+const { ZipArchive } = archiver as unknown as {
+  ZipArchive: new (options: { zlib: zlib.ZlibOptions }) => ZipArchive;
+};
+
 function createZip(zipPath: string, files: { name: string; content: string }[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const out = fs.createWriteStream(zipPath);
-    const archive = archiver("zip", { zlib: { level: 0 } });
+    const archive = new ZipArchive({ zlib: { level: 0 } });
     out.on("close", () => {
       resolve();
     });
