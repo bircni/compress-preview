@@ -5,9 +5,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import * as archiver from "archiver";
 import tar from "tar-stream";
 import * as zlib from "zlib";
+import yazl from "yazl";
 import { extractAllTargetDir, extractEntry, extractAll } from "../archive/extract";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp/unit-extract");
@@ -19,30 +19,18 @@ type TarFixtureEntry = {
   type?: tar.Headers["type"];
 };
 
-type ZipArchive = {
-  append(source: string, data: { name: string }): void;
-  finalize(): Promise<void>;
-  on(event: "error", listener: (error: Error) => void): void;
-  pipe(destination: fs.WriteStream): void;
-};
-
-const { ZipArchive } = archiver as unknown as {
-  ZipArchive: new (options: { zlib: zlib.ZlibOptions }) => ZipArchive;
-};
-
 function createZip(zipPath: string, files: { name: string; content: string }[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    const out = fs.createWriteStream(zipPath);
-    const archive = new ZipArchive({ zlib: { level: 0 } });
-    out.on("close", () => {
-      resolve();
-    });
-    archive.on("error", reject);
-    archive.pipe(out);
-    for (const f of files) {
-      archive.append(f.content, { name: f.name });
+    const zipfile = new yazl.ZipFile();
+    for (const file of files) {
+      zipfile.addBuffer(Buffer.from(file.content, "utf8"), file.name);
     }
-    archive.finalize();
+    const out = fs.createWriteStream(zipPath);
+    zipfile.outputStream.on("error", reject);
+    out.on("error", reject);
+    out.on("close", resolve);
+    zipfile.outputStream.pipe(out);
+    zipfile.end();
   });
 }
 
