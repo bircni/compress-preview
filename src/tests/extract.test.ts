@@ -194,6 +194,15 @@ describe("extract", () => {
     ).rejects.toThrow("Entry not found in archive: missing.txt");
   });
 
+  it("rejects extractEntry for tar symbolic links", async () => {
+    const tarPath = path.join(TMP_DIR, "extract-symlink.tar");
+    await createTar(tarPath, [{ name: "link.txt", type: "symlink" }]);
+
+    await expect(extractEntry(tarPath, "link.txt", path.join(TMP_DIR, "link.txt"))).rejects.toThrow(
+      "Unsupported tar entry type for extraction: symlink",
+    );
+  });
+
   it("extracts all files from a tgz archive", async () => {
     const tgzPath = path.join(TMP_DIR, "extract-all.tgz");
     await createTar(
@@ -253,6 +262,17 @@ describe("extract", () => {
 
     await expect(extractAll(tarPath, outDir, { overwrite: true })).rejects.toThrow(
       "Unsafe archive entry path",
+    );
+  });
+
+  it("rejects extractAll for tar hard links", async () => {
+    const tarPath = path.join(TMP_DIR, "extract-hardlink.tar");
+    await createTar(tarPath, [{ name: "hard-link.txt", type: "link" }]);
+    const outDir = path.join(TMP_DIR, "hardlink-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await expect(extractAll(tarPath, outDir, { overwrite: true })).rejects.toThrow(
+      "Unsupported tar entry type for extraction: link",
     );
   });
 });

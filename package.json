@@ -131,6 +131,14 @@
           "minimum": 1,
           "maximum": 365,
           "markdownDescription": "Remove cached binary preview folders under the OS temp directory after this many days without use."
+        },
+        "compress-preview.textExtensions": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Additional file extensions to treat as text previews (without dots, for example `toml`, `lock`)."
         }
       }
     },
