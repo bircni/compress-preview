@@ -8,7 +8,6 @@ import {
   getZipEditorTestState,
   resetZipEditorTestState,
   setZipEditorTestOverrides,
-  type ZipEditorTestOverrides,
 } from "./editor/zipEditorTestBridge.js";
 import type { WebviewHostMessage } from "./editor/zipEditorController.js";
 import { setOutputChannel } from "./logger.js";
@@ -52,7 +51,7 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.commands.registerCommand(
         "compressPreview.__test.setOverrides",
         (overrides: unknown) => {
-          setZipEditorTestOverrides((overrides ?? {}) as ZipEditorTestOverrides);
+          setZipEditorTestOverrides(overrides ?? {});
         },
       ),
     );
