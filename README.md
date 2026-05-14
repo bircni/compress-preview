@@ -44,6 +44,7 @@ Open **Settings** and search for **Compress Preview**, or edit `settings.json`:
 | `compress-preview.listTimeoutMs` | `10000` | Max time (ms) to spend listing entries before showing partial results. |
 | `compress-preview.watchArchiveFile` | `true` | Reload the preview when the archive file changes on disk. |
 | `compress-preview.tempPreviewMaxAgeDays` | `7` | Days to keep cached binary previews under the OS temp folder before pruning. |
+| `compress-preview.textExtensions` | `[]` | Additional extensions to treat as text (for example `toml`, `lock`) so entries open in the text preview provider. |
 
 ## Notes
 
