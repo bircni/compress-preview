@@ -65,11 +65,12 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run bundle && npm run copy:webview && tsx scripts/run-e2e.ts",
+    "test:webview:browser": "playwright test test/webview.browser.test.js",
     "test:report": "vitest run --coverage && echo 'HTML report at: .tmp/coverage/lcov-report/index.html'",
     "test:watch": "vitest",
     "release": "tsx scripts/release.ts",
     "coverage:summary": "tsx scripts/write-coverage-summary.ts",
-    "validate": "npm run check-unused && npm run lint && npm run format && npm run check:fixtures && npm run test:coverage && npm run test:e2e && npm run build && npm run audit",
+    "validate": "npm run check-unused && npm run lint && npm run format && npm run check:fixtures && npm run test:coverage && npm run test:webview:browser && npm run test:e2e && npm run build && npm run audit",
     "watch": "tsc --project tsconfig.build.json --watch"
   },
   "dependencies": {
@@ -88,6 +89,7 @@
     "@types/vscode": "1.105.0",
     "@types/yauzl": "2.10.3",
     "@types/yazl": "3.3.1",
+    "@playwright/test": "1.60.0",
     "@vitest/coverage-v8": "^4.1.6",
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.9.1",
