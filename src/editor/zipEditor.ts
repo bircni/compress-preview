@@ -40,6 +40,15 @@ function readListTimeoutMs(): number {
   return clampListTimeoutMs(raw, DEFAULT_TIMEOUT_MS);
 }
 
+function readTextExtensions(): string[] {
+  const config = vscode.workspace.getConfiguration("compress-preview");
+  const raw = config.get("textExtensions", []) as unknown;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.filter((value): value is string => typeof value === "string");
+}
+
 class ZipDocument implements vscode.CustomDocument {
   constructor(public readonly uri: vscode.Uri) {}
   dispose(): void {}
@@ -117,6 +126,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       writeClipboardText: async (text) => {
         await vscode.env.clipboard.writeText(text);
       },
+      textExtensions: readTextExtensions(),
     });
 
     const watchArchive =

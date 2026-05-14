@@ -14,6 +14,8 @@ type ProviderHarnessOptions = {
   listTimeoutMs?: number;
   /** Workspace `compress-preview.watchArchiveFile`. */
   watchArchiveFile?: boolean;
+  /** Workspace `compress-preview.textExtensions`. */
+  textExtensions?: string[];
   listEntriesResult?: {
     entries: {
       path: string;
@@ -106,6 +108,9 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
       }
       if (key === "watchArchiveFile") {
         return options.watchArchiveFile ?? true;
+      }
+      if (key === "textExtensions") {
+        return options.textExtensions ?? [];
       }
       return defaultValue;
     }),
@@ -301,6 +306,18 @@ describe("ZipPreviewEditorProvider", () => {
       success: false,
       error: "open failed",
     });
+  });
+
+  it("opens entries with configured custom text extensions", async () => {
+    const harness = await createProviderHarness({
+      textExtensions: ["toml"],
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "openEntry", path: "config/settings.toml" });
+
+    expect(harness.openTextDocument).toHaveBeenCalledTimes(1);
+    expect(harness.executeCommand).not.toHaveBeenCalled();
   });
 
   it("opens binary entries from a temp preview file", async () => {

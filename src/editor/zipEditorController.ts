@@ -8,7 +8,7 @@ import type { InitialEntriesPayload } from "../webview/content";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
-const TEXT_EXTENSIONS = new Set([
+const DEFAULT_TEXT_EXTENSIONS = new Set([
   "txt",
   "json",
   "md",
@@ -88,6 +88,7 @@ export type ZipEditorControllerDeps = {
   logError: (message: string, error: unknown) => void;
   onBinaryPreviewPath?: (previewPath: string) => void;
   writeClipboardText: (text: string) => Promise<void>;
+  textExtensions?: string[];
 };
 
 async function writeStreamToFile(
@@ -108,15 +109,34 @@ async function writeStreamToFile(
   return createFileUri(targetPath);
 }
 
-function isTextEntryName(name: string): boolean {
+function isTextEntryName(name: string, textExtensions: Set<string>): boolean {
   const ext = path.extname(name).toLowerCase().replace(/^\./, "");
-  return TEXT_EXTENSIONS.has(ext) || !ext;
+  return textExtensions.has(ext) || !ext;
+}
+
+function isPathWithinRoot(rootDir: string, candidatePath: string): boolean {
+  const resolvedRoot = path.resolve(rootDir);
+  const resolvedCandidate = path.resolve(candidatePath);
+  const relativePath = path.relative(resolvedRoot, resolvedCandidate);
+  return (
+    relativePath === "" ||
+    relativePath === "." ||
+    (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
+  );
 }
 
 export function createZipEditorController(deps: ZipEditorControllerDeps): {
   loadAndSetHtml: () => Promise<void>;
   handleMessage: (msg: WebviewHostMessage) => Promise<void>;
 } {
+  const textExtensions = new Set(DEFAULT_TEXT_EXTENSIONS);
+  for (const extension of deps.textExtensions ?? []) {
+    const normalized = extension.trim().toLowerCase().replace(/^\./, "");
+    if (normalized) {
+      textExtensions.add(normalized);
+    }
+  }
+
   const postMessage = async (message: unknown): Promise<void> => {
     await deps.postMessage(message);
   };
@@ -181,7 +201,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
     if (msg.type === "openEntry" && msg.path) {
       const entryPath = msg.path;
       try {
-        if (isTextEntryName(path.basename(entryPath))) {
+        if (isTextEntryName(path.basename(entryPath), textExtensions)) {
           const uri = deps.createTextPreviewUri(deps.zipPath, entryPath);
           const doc = await deps.openTextDocument(uri);
           await deps.showTextDocument(doc, { preview: false });
@@ -219,6 +239,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
     if (msg.type === "extractEntry" && msg.path) {
       try {
         let targetPath: string | undefined = msg.targetPath;
+        let extractionRoot: string | undefined;
         if (!targetPath) {
           const chosen = await deps.showOpenDialog({
             canSelectFiles: false,
@@ -229,6 +250,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
           });
           const folder = chosen?.[0]?.fsPath;
           if (folder) {
+            extractionRoot = folder;
             targetPath = deps.getEntryExtractionTarget(folder, msg.path);
           }
         }
@@ -237,6 +259,14 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
             type: "extractResult",
             success: false,
             error: "Cancelled",
+          });
+          return;
+        }
+        if (extractionRoot && !isPathWithinRoot(extractionRoot, targetPath)) {
+          await postMessage({
+            type: "extractResult",
+            success: false,
+            error: `Unsafe extraction target path: ${targetPath}`,
           });
           return;
         }

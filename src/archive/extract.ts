@@ -71,6 +71,10 @@ function createTarInputStream(
   };
 }
 
+function isUnsupportedTarEntryType(header: tar.Headers): boolean {
+  return header.type === "symlink" || header.type === "link";
+}
+
 function extractZipEntry(archivePath: string, entryPath: string, outPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     yauzl.open(
@@ -186,6 +190,13 @@ function extractTarEntry(
         destroy();
         extract.destroy();
         resolve();
+        return;
+      }
+      if (isUnsupportedTarEntryType(header)) {
+        stream.resume();
+        finishWithError(
+          new Error(`Unsupported tar entry type for extraction: ${String(header.type)}`),
+        );
         return;
       }
       fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -436,6 +447,13 @@ function extractAllTar(
         stream.on("end", () => {
           next();
         });
+        return;
+      }
+      if (isUnsupportedTarEntryType(header)) {
+        stream.resume();
+        finishWithError(
+          new Error(`Unsupported tar entry type for extraction: ${String(header.type)}`),
+        );
         return;
       }
 
