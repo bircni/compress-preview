@@ -159,6 +159,15 @@
       gap: 8px;
       flex-wrap: wrap;
     }
+    .sortSelect {
+      padding: 4px 8px;
+      border: 1px solid var(--vscode-input-border, var(--panel-border));
+      border-radius: var(--radius-md);
+      background: var(--input-bg);
+      color: inherit;
+      font: inherit;
+      min-width: 170px;
+    }
     .searchInput {
       width: min(420px, 100%);
       padding: 5px 8px;
@@ -239,6 +248,14 @@
       padding: 0;
       border-radius: var(--radius-sm);
       font-size: 10px;
+      line-height: 1;
+      flex: none;
+    }
+    .rowIcon {
+      width: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
       line-height: 1;
       flex: none;
     }
@@ -403,6 +420,14 @@
         <div class="searchRow">
           <div class="searchGroup">
             <input id="searchInput" class="searchInput" type="search" placeholder="Search files">
+            <select id="sortSelect" class="sortSelect" aria-label="Sort entries">
+              <option value="pathAsc">Path A→Z</option>
+              <option value="pathDesc">Path Z→A</option>
+              <option value="sizeDesc">Largest first</option>
+              <option value="sizeAsc">Smallest first</option>
+              <option value="mtimeDesc">Newest first</option>
+              <option value="mtimeAsc">Oldest first</option>
+            </select>
             <div class="chipRow" id="filterRow">
               <span class="filterLabel">View</span>
               <button class="filterChip is-active" type="button" data-filter="all">All</button>
@@ -451,6 +476,7 @@
     var statusTextEl = document.getElementById('statusText');
     var searchInput = document.getElementById('searchInput');
     var refreshBtn = document.getElementById('refreshBtn');
+    var sortSelect = document.getElementById('sortSelect');
     var filterButtons = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
 
     var allEntries = [];
@@ -458,6 +484,7 @@
     var collapsedPaths = {};
     var activeFilter = 'all';
     var searchQuery = '';
+    var activeSort = 'pathAsc';
 
     function formatSize(n) {
       if (n == null) return '';
@@ -622,11 +649,32 @@
         }
       });
 
+      function compareBySort(a, b) {
+        if (activeSort === 'pathAsc') return compareEntries(a.entry, b.entry);
+        if (activeSort === 'pathDesc') return compareEntries(b.entry, a.entry);
+
+        var aSize = a.entry.size == null ? -1 : a.entry.size;
+        var bSize = b.entry.size == null ? -1 : b.entry.size;
+        if (activeSort === 'sizeDesc' || activeSort === 'sizeAsc') {
+          if (aSize !== bSize) return activeSort === 'sizeDesc' ? bSize - aSize : aSize - bSize;
+          return compareEntries(a.entry, b.entry);
+        }
+
+        var aTime = a.entry.mtime == null ? -1 : new Date(a.entry.mtime).getTime();
+        var bTime = b.entry.mtime == null ? -1 : new Date(b.entry.mtime).getTime();
+        if (activeSort === 'mtimeDesc' || activeSort === 'mtimeAsc') {
+          if (aTime !== bTime) return activeSort === 'mtimeDesc' ? bTime - aTime : aTime - bTime;
+          return compareEntries(a.entry, b.entry);
+        }
+
+        return compareEntries(a.entry, b.entry);
+      }
+
       function sortChildren(node) {
-        node.children.sort(function(a, b) { return compareEntries(a.entry, b.entry); });
+        node.children.sort(compareBySort);
         node.children.forEach(sortChildren);
       }
-      roots.sort(function(a, b) { return compareEntries(a.entry, b.entry); });
+      roots.sort(compareBySort);
       roots.forEach(sortChildren);
       return roots;
     }
@@ -710,11 +758,11 @@
       var actions = '';
       var badge = '';
       if (!isFolder) {
-        actions += '<button class="rowAction" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '">Open</button>';
+        actions += '<button class="rowAction" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Open ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Open</button>';
       }
-      actions += '<button class="rowAction" type="button" data-action="copy" data-path="' + escapeHtml(node.entry.path) + '">Copy path</button>';
+      actions += '<button class="rowAction" type="button" data-action="copy" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Copy path for ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Copy path</button>';
       if (!node.synthetic) {
-        actions += '<button class="rowAction" type="button" data-action="extract" data-path="' + escapeHtml(node.entry.path) + '">Extract</button>';
+        actions += '<button class="rowAction" type="button" data-action="extract" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Extract ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Extract</button>';
       }
 
       if (isFolder) {
@@ -734,17 +782,19 @@
       }
 
       var toggleMarkup = hasChildren || isFolder
-        ? '<button class="rowToggle" type="button" data-action="toggle" data-path="' + escapeHtml(node.entry.path) + '">' + (isCollapsed ? '&#9654;' : '&#9662;') + '</button>'
+        ? '<button class="rowToggle" type="button" data-action="toggle" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Toggle folder ' + escapeHtml(node.entry.name || node.entry.path || '') + '" aria-expanded="' + (!isCollapsed) + '">' + (isCollapsed ? '&#9654;' : '&#9662;') + '</button>'
         : '<button class="rowToggle is-hidden" type="button" aria-hidden="true"></button>';
+      var iconLabel = isFolder ? 'DIR' : (isTextEntry(node.entry) ? 'TXT' : 'BIN');
 
       var nameMarkup = isFolder
         ? '<span class="rowName">' + escapeHtml((node.entry.name || node.entry.path || '') + '/') + badge + '</span>'
-        : '<button class="rowNameButton" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '">' + escapeHtml(node.entry.name || node.entry.path || '') + '</button>';
+        : '<button class="rowNameButton" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Open ' + escapeHtml(node.entry.name || node.entry.path || '') + '">' + escapeHtml(node.entry.name || node.entry.path || '') + '</button>';
 
       var html = ''
         + '<li class="row" data-kind="' + (isFolder ? 'dir' : 'file') + '" style="padding-left:' + (14 + level * 18) + 'px">'
         + '<div class="rowMain">'
         + toggleMarkup
+        + '<span class="rowIcon" aria-hidden="true">' + iconLabel + '</span>'
         + '<span class="rowDot"></span>'
         + '<div class="rowLabel">'
         + nameMarkup
@@ -940,6 +990,14 @@
       if (searchInput) {
         searchInput.addEventListener('input', function() {
           searchQuery = (searchInput.value || '').trim().toLowerCase();
+          renderEntries();
+        });
+      }
+      if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+          activeSort = sortSelect.value || 'pathAsc';
+          rootNodes = buildTree(allEntries);
+          rootNodes.forEach(computeNodeStats);
           renderEntries();
         });
       }
