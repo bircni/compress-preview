@@ -59,7 +59,7 @@
     "uninstall:code:debug": "code --uninstall-extension bircni.compress-preview",
     "install:cursor:debug": "npm run build && cursor --install-extension dist/extension.vsix --force",
     "uninstall:cursor:debug": "cursor --uninstall-extension bircni.compress-preview",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "package": "vsce package --out dist/extension.vsix",
     "test": "vitest run",

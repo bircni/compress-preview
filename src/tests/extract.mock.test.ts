@@ -57,9 +57,7 @@ describe("extract mocked branches", () => {
 
   it("creates a directory when extracting a directory entry", async () => {
     const zipfile = new FakeZipFile();
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
     const outPath = path.join(tmpDir, "folder");
 
     const pending = extractEntry("zip.zip", "folder", outPath);
@@ -73,9 +71,7 @@ describe("extract mocked branches", () => {
   it("rejects extractEntry when openReadStream returns no stream", async () => {
     const zipfile = new FakeZipFile();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, undefined));
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractEntry("zip.zip", "file.txt", path.join(tmpDir, "out.txt"));
     zipfile.emit("entry", makeEntry("file.txt"));
@@ -86,9 +82,7 @@ describe("extract mocked branches", () => {
   it("rejects extractEntry when the matching entry stream fails to open", async () => {
     const zipfile = new FakeZipFile();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(new Error("stream failed")));
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractEntry("zip.zip", "file.txt", path.join(tmpDir, "out.txt"));
     zipfile.emit("entry", makeEntry("file.txt"));
@@ -99,9 +93,7 @@ describe("extract mocked branches", () => {
 
   it("rejects extractEntry when the matching entry is missing", async () => {
     const zipfile = new FakeZipFile();
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractEntry("zip.zip", "missing.txt", path.join(tmpDir, "out.txt"));
     zipfile.emit("entry", makeEntry("other.txt"));
@@ -130,9 +122,7 @@ describe("extract mocked branches", () => {
   it("rejects extractAll when an entry stream fails to open", async () => {
     const zipfile = new FakeZipFile();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(new Error("stream failed")));
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
     zipfile.emit("entry", makeEntry("file.txt"));
@@ -145,9 +135,7 @@ describe("extract mocked branches", () => {
     const zipfile = new FakeZipFile();
     const stream = new PassThrough();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, stream));
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
     zipfile.emit("entry", makeEntry("file.txt"));
@@ -160,9 +148,7 @@ describe("extract mocked branches", () => {
   it("rejects extractAll when an entry stream is missing", async () => {
     const zipfile = new FakeZipFile();
     zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, undefined));
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
     zipfile.emit("entry", makeEntry("file.txt"));
@@ -173,9 +159,7 @@ describe("extract mocked branches", () => {
 
   it("rejects extractAll when an entry escapes the output directory", async () => {
     const zipfile = new FakeZipFile();
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
     zipfile.emit("entry", makeEntry("../outside.txt"));
@@ -186,9 +170,7 @@ describe("extract mocked branches", () => {
 
   it("ignores duplicate end events after extractAll has already resolved", async () => {
     const zipfile = new FakeZipFile();
-    openMock.mockImplementation((_zipPath, _options, cb) =>
-      cb(null, zipfile as unknown as yauzl.ZipFile),
-    );
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
     zipfile.emit("end");
