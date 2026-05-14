@@ -131,6 +131,18 @@ describe("extract mocked branches", () => {
     expect(zipfile.close).toHaveBeenCalled();
   });
 
+  it("does not request another entry after extractAll stream-open failure", async () => {
+    const zipfile = new FakeZipFile();
+    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(new Error("stream failed")));
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
+
+    const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });
+    zipfile.emit("entry", makeEntry("file.txt"));
+
+    await expect(pending).rejects.toThrow("stream failed");
+    expect(zipfile.readEntry).toHaveBeenCalledTimes(1);
+  });
+
   it("converts non-Error read stream failures during extractAll", async () => {
     const zipfile = new FakeZipFile();
     const stream = new PassThrough();

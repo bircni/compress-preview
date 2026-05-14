@@ -21,9 +21,21 @@ describe("archivePaths", () => {
     ]);
   });
 
+  it("rejects unsafe parent-directory segments", () => {
+    expect(() => normalizeArchiveEntrySegments("../nested/file.txt")).toThrow(
+      "Unsafe archive entry path",
+    );
+  });
+
   it("preserves relative structure for single-entry extraction", () => {
     expect(getEntryExtractionTarget("/tmp/out", "nested/deeper/file.txt")).toBe(
       path.join("/tmp/out", "nested", "deeper", "file.txt"),
+    );
+  });
+
+  it("rejects unsafe extraction targets", () => {
+    expect(() => getEntryExtractionTarget("/tmp/out", "../../escape.txt")).toThrow(
+      "Unsafe archive entry path",
     );
   });
 
