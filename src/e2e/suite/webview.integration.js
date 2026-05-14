@@ -188,4 +188,25 @@ describe("Compress Preview Webview Integration", () => {
 
     dom.window.close();
   });
+
+  it("sorts entries and exposes accessible row actions", async () => {
+    const { document, window, dom } = await createWebviewHarness({ entries: sampleEntries });
+    const sortSelect = document.getElementById("sortSelect");
+    assert.ok(sortSelect, "Sort select should exist");
+
+    sortSelect.value = "sizeDesc";
+    sortSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+
+    const fileRows = Array.from(document.querySelectorAll('.row[data-kind="file"] .rowNameButton')).map(
+      (element) => element.textContent.trim(),
+    );
+    assert.strictEqual(fileRows[0], "data.js");
+
+    const extractButton = document.querySelector('[data-action="extract"][aria-label]');
+    const copyButton = document.querySelector('[data-action="copy"][aria-label]');
+    assert.ok(extractButton, "Extract button should have an aria-label");
+    assert.ok(copyButton, "Copy button should have an aria-label");
+
+    dom.window.close();
+  });
 });
