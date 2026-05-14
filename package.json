@@ -83,7 +83,6 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@tsconfig/node-lts": "24.0.0",
-    "@types/archiver": "7.0.0",
     "@types/node": "25.8.0",
     "@types/tar-stream": "3.1.4",
     "@types/vscode": "1.105.0",
@@ -92,7 +91,6 @@
     "@vitest/coverage-v8": "^4.1.6",
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.9.1",
-    "archiver": "8.0.0",
     "depcheck": "1.4.7",
     "esbuild": "0.28.0",
     "eslint": "10.3.0",
