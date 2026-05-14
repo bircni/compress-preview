@@ -323,6 +323,9 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
         };
 
         const onDone = (error?: Error) => {
+          if (done) {
+            return;
+          }
           if (error) {
             done = true;
             zipfile.close();
@@ -335,6 +338,9 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
         };
 
         zipfile.on("entry", (entry: yauzl.Entry): void => {
+          if (done) {
+            return;
+          }
           let destPath: string;
           try {
             destPath = resolveArchiveDestination(resolvedOutDir, entry.fileName);
@@ -354,12 +360,10 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
             (streamErr: Error | null, readStream: NodeJS.ReadableStream | undefined) => {
               if (streamErr) {
                 onDone(streamErr);
-                zipfile.readEntry();
                 return;
               }
               if (!readStream) {
                 onDone(new Error("No stream"));
-                zipfile.readEntry();
                 return;
               }
               const writeStream = fs.createWriteStream(destPath);
@@ -377,7 +381,9 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
           );
         });
 
-        zipfile.on("error", reject);
+        zipfile.on("error", (error) => {
+          onDone(error instanceof Error ? error : new Error(String(error)));
+        });
         zipfile.on("end", () => {
           entriesDone = true;
           maybeResolve();

@@ -36,6 +36,31 @@ describe("zipContentProvider", () => {
     expect(content).toBe("hello world");
   });
 
+  it("reads string chunks from entry streams", async () => {
+    const openEntryReadStream = vi.fn().mockImplementation(async () => {
+      const stream = new PassThrough();
+      stream.setEncoding("utf8");
+      queueMicrotask(() => stream.end("hello from string chunk"));
+      return {
+        entry: { path: "docs/readme.txt", name: "readme.txt", isDirectory: false },
+        stream,
+      };
+    });
+
+    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
+
+    const { ZipContentProvider } =
+      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const provider = new ZipContentProvider();
+    const content = await provider.provideTextDocumentContent({
+      query: "zip=%2Ftmp%2Farchive.zip&entry=docs%2Freadme.txt",
+      path: "",
+    } as never);
+
+    expect(content).toBe("hello from string chunk");
+  });
+
   it("falls back to the URI path when the entry query parameter is omitted", async () => {
     const openEntryReadStream = vi.fn().mockResolvedValue({
       entry: { path: "docs/readme.txt", name: "readme.txt", isDirectory: false },

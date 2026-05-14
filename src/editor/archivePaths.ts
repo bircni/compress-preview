@@ -9,11 +9,17 @@ const TEMP_PREVIEW_ROOT = path.join(os.tmpdir(), "compress-preview");
 export const DEFAULT_TEMP_PREVIEW_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 
 export function normalizeArchiveEntrySegments(entryPath: string): string[] {
-  return entryPath
+  const segments = entryPath
     .replace(/\\/g, "/")
     .replace(/^\.\//, "")
     .split("/")
     .filter((segment) => segment.length > 0 && segment !== ".");
+
+  if (segments.includes("..")) {
+    throw new Error(`Unsafe archive entry path: ${entryPath}`);
+  }
+
+  return segments;
 }
 
 export function getEntryExtractionTarget(baseDir: string, entryPath: string): string {

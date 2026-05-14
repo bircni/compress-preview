@@ -10,8 +10,14 @@ const SCHEME = "compress-preview";
 
 function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    const chunks: Uint8Array[] = [];
+    stream.on("data", (chunk: Buffer | string) => {
+      if (typeof chunk === "string") {
+        chunks.push(Buffer.from(chunk, "utf8"));
+        return;
+      }
+      chunks.push(chunk);
+    });
     stream.on("end", () => {
       resolve(Buffer.concat(chunks).toString("utf8"));
     });
