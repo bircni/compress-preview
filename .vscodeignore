@@ -70,3 +70,5 @@ cliff.toml
 .tmp/**
 .node-version
 .fixtures/**
+playwright.config.js
+test/**

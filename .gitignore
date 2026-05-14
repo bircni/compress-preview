@@ -23,6 +23,8 @@ Thumbs.db
 # Test and coverage
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # VS Code extension
 *.vsix
