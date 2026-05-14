@@ -50,6 +50,15 @@ export async function markTempPreviewUsed(tempPreviewPath: string): Promise<void
   await fs.promises.utimes(archiveCacheDir, stamp, stamp);
 }
 
+function hasErrorCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === code
+  );
+}
+
 export async function cleanupTempPreviews(
   maxAgeMs: number = DEFAULT_TEMP_PREVIEW_MAX_AGE_MS,
 ): Promise<void> {
@@ -58,14 +67,32 @@ export async function cleanupTempPreviews(
   }
 
   const now = Date.now();
-  const rootEntries = await fs.promises.readdir(TEMP_PREVIEW_ROOT, { withFileTypes: true });
+  let rootEntries: fs.Dirent[];
+  try {
+    rootEntries = await fs.promises.readdir(TEMP_PREVIEW_ROOT, { withFileTypes: true });
+  } catch (error) {
+    if (hasErrorCode(error, "ENOENT")) {
+      return;
+    }
+    throw error;
+  }
+
   await Promise.all(
     rootEntries.map(async (entry) => {
       if (!entry.isDirectory()) {
         return;
       }
       const candidatePath = path.join(TEMP_PREVIEW_ROOT, entry.name);
-      const stats = await fs.promises.stat(candidatePath);
+      let stats: fs.Stats;
+      try {
+        stats = await fs.promises.stat(candidatePath);
+      } catch (error) {
+        if (hasErrorCode(error, "ENOENT")) {
+          return;
+        }
+        throw error;
+      }
+
       if (now - stats.mtimeMs > maxAgeMs) {
         await fs.promises.rm(candidatePath, { recursive: true, force: true });
       }
