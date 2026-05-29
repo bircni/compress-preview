@@ -97,4 +97,20 @@ describe("buildArchiveTree", () => {
     expect(tree[0].entry.path).toBe("same");
     expect(tree[0].children[0].entry.path).toBe("same/deeper.txt");
   });
+
+  it("returns an empty tree for an empty entry list", () => {
+    expect(buildArchiveTree([])).toEqual([]);
+  });
+
+  it("deduplicates explicit directory entries with the same path", () => {
+    const tree = buildArchiveTree([
+      { path: "dup/", name: "dup", isDirectory: true },
+      { path: "dup/", name: "dup", isDirectory: true },
+      { path: "dup/file.txt", name: "file.txt", isDirectory: false },
+    ]);
+
+    expect(tree).toHaveLength(1);
+    expect(tree[0].children).toHaveLength(1);
+    expect(tree[0].children[0].entry.path).toBe("dup/file.txt");
+  });
 });

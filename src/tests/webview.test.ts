@@ -36,8 +36,8 @@ describe("getInitialHtml", () => {
     expect(html).toContain('data-sort="size"');
     expect(html).toContain('data-sort="mtime"');
     expect(html).toContain('data-col="kind"');
-    expect(html).toContain('colResizeHandle');
-    expect(html).toContain('layoutTableColumns');
+    expect(html).toContain("colResizeHandle");
+    expect(html).toContain("layoutTableColumns");
     expect(html).toContain('data-filter="binary"');
     expect(html).toContain('id="expandAllBtn"');
   });
@@ -84,5 +84,24 @@ describe("getInitialHtml", () => {
       (await import("../webview/content")) as typeof webviewContentModule;
 
     expect(() => missingTemplateHtml("vscode-webview:")).toThrow("Missing webview template");
+  });
+
+  it("injects the codicons stylesheet href when provided", () => {
+    const html = getInitialHtml("vscode-webview://webview/", undefined, {
+      codiconsStyleHref: "vscode-webview://webview/codicon.css",
+    });
+
+    expect(html).toContain('href="vscode-webview://webview/codicon.css"');
+  });
+
+  it("embeds partial result metadata in the initial JSON payload", () => {
+    const html = getInitialHtml("vscode-webview:", {
+      entries: [{ path: "a.txt", name: "a.txt", isDirectory: false }],
+      isPartial: true,
+      message: "Stopped early",
+    });
+
+    expect(html).toContain('"isPartial":true');
+    expect(html).toContain("Stopped early");
   });
 });
