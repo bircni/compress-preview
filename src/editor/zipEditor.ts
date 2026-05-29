@@ -77,7 +77,16 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       uriScheme: document.uri.scheme,
       cspSourceLength: cspSource.length,
     });
-    webviewPanel.webview.options = { enableScripts: true };
+    const webviewRoot = vscode.Uri.file(
+      path.join(this.context.extensionUri.fsPath, "dist", "webview"),
+    );
+    const codiconsStyleHref = webviewPanel.webview
+      .asWebviewUri(vscode.Uri.file(path.join(webviewRoot.fsPath, "codicon.css")))
+      .toString();
+    webviewPanel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [webviewRoot],
+    };
 
     const controller = createZipEditorController({
       zipPath,
@@ -95,7 +104,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       },
       createTextPreviewUri: makeZipPreviewUri,
       createFileUri: (fsPath) => vscode.Uri.file(fsPath),
-      getInitialHtml,
+      getInitialHtml: (csp, initialData) => getInitialHtml(csp, initialData, { codiconsStyleHref }),
       listEntries,
       openEntryReadStream,
       extractEntry,

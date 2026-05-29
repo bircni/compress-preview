@@ -64,6 +64,7 @@ function renderHtml(initialData) {
 
   return templateHtml
     .replaceAll("__CSP_SOURCE__", "vscode-webview:")
+    .replace("__CODICONS_STYLE__", "")
     .replace("__INITIAL_SCRIPT__", initialScript);
 }
 
@@ -191,11 +192,11 @@ describe("Compress Preview Webview Integration", () => {
 
   it("sorts entries and exposes accessible row actions", async () => {
     const { document, window, dom } = await createWebviewHarness({ entries: sampleEntries });
-    const sortSelect = document.getElementById("sortSelect");
-    assert.ok(sortSelect, "Sort select should exist");
+    const sizeHeader = document.querySelector('[data-sort="size"]');
+    assert.ok(sizeHeader, "Size column header should exist");
 
-    sortSelect.value = "sizeDesc";
-    sortSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+    sizeHeader.click();
+    sizeHeader.click();
 
     const fileRows = Array.from(document.querySelectorAll('.row[data-kind="file"] .rowNameButton')).map(
       (element) => element.textContent.trim(),

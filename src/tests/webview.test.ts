@@ -33,7 +33,11 @@ describe("getInitialHtml", () => {
     expect(script).toContain("function buildTree(entries)");
     expect(script).toContain("function renderVisibleTree()");
     expect(html).toContain('placeholder="Search files"');
-    expect(html).toContain('id="sortSelect"');
+    expect(html).toContain('data-sort="size"');
+    expect(html).toContain('data-sort="mtime"');
+    expect(html).toContain('data-col="kind"');
+    expect(html).toContain('colResizeHandle');
+    expect(html).toContain('layoutTableColumns');
     expect(html).toContain('data-filter="binary"');
     expect(html).toContain('id="expandAllBtn"');
   });

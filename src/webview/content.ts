@@ -39,7 +39,16 @@ function getTemplateHtml(): string {
  * @param cspSource - Webview cspSource so inline script/style are allowed (required for CSP).
  * @param initialData - When set, entries are embedded in the page so the tree shows without postMessage.
  */
-export function getInitialHtml(cspSource: string, initialData?: InitialEntriesPayload): string {
+export type InitialHtmlOptions = {
+  /** Webview URI to dist/webview/codicon.css (required for tree icons in the editor). */
+  codiconsStyleHref?: string;
+};
+
+export function getInitialHtml(
+  cspSource: string,
+  initialData?: InitialEntriesPayload,
+  options?: InitialHtmlOptions,
+): string {
   const initialScript =
     initialData != null
       ? `<script id="initial-entries" type="application/json">${JSON.stringify({
@@ -50,7 +59,10 @@ export function getInitialHtml(cspSource: string, initialData?: InitialEntriesPa
         }).replace(/</g, "\\u003c")}</script>`
       : "";
 
+  const codiconsStyleHref = options?.codiconsStyleHref ?? "";
+
   return getTemplateHtml()
     .replaceAll("__CSP_SOURCE__", cspSource)
+    .replace("__CODICONS_STYLE__", codiconsStyleHref)
     .replace("__INITIAL_SCRIPT__", initialScript);
 }
