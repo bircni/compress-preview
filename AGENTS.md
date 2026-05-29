@@ -91,9 +91,11 @@ npm run watch          # tsc watch (no bundle)
 **Testing:**
 
 ```bash
-npm test               # Run all tests
+npm test               # Run unit tests (Vitest unit project)
 npm run test:watch     # Watch mode
-npm run test:coverage  # Coverage report
+npm run test:coverage  # Coverage report (unit project)
+npm run test:e2e       # Playwright webview + VS Code extension-host tests (Vitest e2e* projects)
+npm run test:webview:browser # Playwright webview only (Vitest e2e-browser project)
 npm run test:report    # Tests then report path
 ```
 
@@ -104,7 +106,7 @@ npm run lint           # ESLint
 npm run format         # Prettier check
 npm run format:write   # Prettier fix
 npm run check-unused   # depcheck
-npm run validate       # check-unused + lint + format + test:coverage + build
+npm run validate       # check-unused + lint + format + test:coverage + test:e2e + build
 ```
 
 **Security:**

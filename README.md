@@ -57,7 +57,8 @@ Open **Settings** and search for **Compress Preview**, or edit `settings.json`:
 ## Testing
 
 - `npm test` runs unit and fixture-backed integration tests.
-- `npm run test:e2e` runs VS Code extension-host smoke tests plus `jsdom`-based webview integration tests against the packaged extension bundle.
+- `npm run test:e2e` bundles the extension and runs all end-to-end tests via Vitest: Playwright webview layout checks (`e2e-browser`) and VS Code extension-host smoke tests (`e2e-extension-host`). Webview JSDOM integration tests run with the unit project (`src/tests/webview.harness.test.ts`).
+- `npm run test:webview:browser` runs only the Playwright webview suite (alias for `vitest run --project e2e-browser`).
 
 ## Install
 

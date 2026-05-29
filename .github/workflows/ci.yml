@@ -29,9 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browser (Chromium)
-        run: npx playwright install --with-deps chromium
-
       - name: Verify generated fixtures
         run: npm run check:fixtures
 
@@ -49,9 +46,6 @@ jobs:
 
       - name: Test
         run: npm run test:coverage
-
-      - name: Browser webview test
-        run: npm run test:webview:browser
 
       - name: Publish coverage summary
         run: npm run coverage:summary
@@ -89,6 +83,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install Playwright browser (Chromium)
+        run: npx playwright install --with-deps chromium
 
       - name: Extension smoke tests (Linux)
         if: runner.os == 'Linux'
