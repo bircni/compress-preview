@@ -1,24 +1,33 @@
-const assert = require("assert");
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
-const { describe, it } = require("mocha");
-const tar = require("tar-stream");
-const vscode = require("vscode");
-const zlib = require("zlib");
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import tar from "tar-stream";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import * as vscode from "vscode";
+import zlib from "zlib";
 
-function fixtureUri(fileName) {
-  return vscode.Uri.file(path.resolve(__dirname, "..", "..", "..", ".fixtures", fileName));
+function fixtureUri(fileName: string): vscode.Uri {
+  return vscode.Uri.file(path.resolve(__dirname, "..", "..", ".fixtures", fileName));
 }
 
-function previewUri(archiveUri, entryPath) {
+function previewUri(archiveUri: vscode.Uri, entryPath: string): vscode.Uri {
   return vscode.Uri.parse(
     `compress-preview://preview?zip=${encodeURIComponent(archiveUri.fsPath)}&entry=${encodeURIComponent(entryPath)}`,
   );
 }
 
-async function createTarFixture(targetPath, entries, options = {}) {
-  await new Promise((resolve, reject) => {
+type TarFixtureEntry = {
+  name: string;
+  type?: string;
+  content?: string;
+};
+
+async function createTarFixture(
+  targetPath: string,
+  entries: TarFixtureEntry[],
+  options: { gzip?: boolean } = {},
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
     const pack = tar.pack();
     const output = fs.createWriteStream(targetPath);
     const target = options.gzip ? pack.pipe(zlib.createGzip()) : pack;
@@ -40,15 +49,18 @@ async function createTarFixture(targetPath, entries, options = {}) {
   });
 }
 
-function createGzipFixture(targetPath, content) {
+function createGzipFixture(targetPath: string, content: string): void {
   fs.writeFileSync(targetPath, zlib.gzipSync(content));
 }
 
-async function waitFor(assertion, options = {}) {
+async function waitFor<T>(
+  assertion: () => T | Promise<T>,
+  options: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<T> {
   const timeoutMs = options.timeoutMs ?? 10_000;
   const intervalMs = options.intervalMs ?? 50;
   const startedAt = Date.now();
-  let lastError;
+  let lastError: unknown;
 
   while (Date.now() - startedAt < timeoutMs) {
     try {
@@ -59,46 +71,57 @@ async function waitFor(assertion, options = {}) {
     }
   }
 
-  throw lastError ?? new Error("Timed out waiting for condition");
+  throw lastError instanceof Error ? lastError : new Error("Timed out waiting for condition");
 }
 
-async function getEditorState() {
+type EditorState = {
+  zipPath: string;
+  html: string;
+  sentMessages: unknown[];
+  lastBinaryPreviewPath?: string;
+};
+
+async function getEditorState(): Promise<EditorState | undefined> {
   return vscode.commands.executeCommand("compressPreview.__test.getState");
 }
 
-async function setEditorOverrides(overrides) {
+async function setEditorOverrides(overrides: Record<string, unknown>): Promise<void> {
   await vscode.commands.executeCommand("compressPreview.__test.setOverrides", overrides);
 }
 
-async function postEditorMessage(message) {
+async function postEditorMessage(message: Record<string, unknown>): Promise<void> {
   await vscode.commands.executeCommand("compressPreview.__test.postMessage", message);
 }
 
-async function clearEditorMessages() {
+async function clearEditorMessages(): Promise<void> {
   await vscode.commands.executeCommand("compressPreview.__test.clearMessages");
 }
 
-async function resetEditorState() {
+async function resetEditorState(): Promise<void> {
   await vscode.commands.executeCommand("compressPreview.__test.reset");
   await vscode.commands.executeCommand("workbench.action.closeAllEditors");
 }
 
-async function openCustomEditorFor(uri) {
+async function openCustomEditorFor(uri: vscode.Uri): Promise<EditorState> {
   await resetEditorState();
   await vscode.commands.executeCommand("vscode.openWith", uri, "compressPreview");
   return waitFor(async () => {
     const state = await getEditorState();
-    assert.ok(state, "Expected active compress preview editor state");
-    assert.strictEqual(state.zipPath, uri.fsPath);
-    assert.ok(state.html.length > 0, "Expected custom editor HTML to be rendered");
+    if (!state) {
+      throw new Error("Editor state not available");
+    }
+    expect(state.zipPath).toBe(uri.fsPath);
+    expect(state.html.length).toBeGreaterThan(0);
     return state;
   });
 }
 
-describe("Compress Preview E2E", () => {
-  before(async () => {
+describe("Compress Preview extension host", () => {
+  beforeAll(async () => {
     const extension = vscode.extensions.getExtension("bircni.compress-preview");
-    assert.ok(extension, "Extension should be installed in the extension host");
+    if (!extension) {
+      throw new Error("Extension bircni.compress-preview not found");
+    }
     await extension.activate();
   });
 
@@ -110,7 +133,7 @@ describe("Compress Preview E2E", () => {
     const uri = previewUri(fixtureUri("sample-app.apk"), "docs/manifest.json");
     const document = await vscode.workspace.openTextDocument(uri);
 
-    assert.ok(document.getText().includes('"name": "compress-preview-fixture"'));
+    expect(document.getText()).toContain('"name": "compress-preview-fixture"');
   });
 
   it("reads TAR-based fixture entries through the virtual document provider", async () => {
@@ -121,7 +144,7 @@ describe("Compress Preview E2E", () => {
 
     const document = await vscode.workspace.openTextDocument(uri);
 
-    assert.ok(document.getText().includes("Sample TAR fixture"));
+    expect(document.getText()).toContain("Sample TAR fixture");
     fs.rmSync(tarPath, { force: true });
   });
 
@@ -133,22 +156,21 @@ describe("Compress Preview E2E", () => {
 
     const document = await vscode.workspace.openTextDocument(uri);
 
-    assert.ok(document.getText().includes("Sample gzip fixture"));
+    expect(document.getText()).toContain("Sample gzip fixture");
     fs.rmSync(gzipPath, { force: true });
   });
 
   it("rejects invalid preview URIs", async () => {
-    await assert.rejects(
-      () => vscode.workspace.openTextDocument(vscode.Uri.parse("compress-preview://preview")),
-      /Invalid compress-preview URI/,
-    );
+    await expect(
+      vscode.workspace.openTextDocument(vscode.Uri.parse("compress-preview://preview")),
+    ).rejects.toThrow(/Invalid compress-preview URI/);
   });
 
   it("opens supported archives with the custom editor", async () => {
     const archiveUri = fixtureUri("large-sample.zip");
     const state = await openCustomEditorFor(archiveUri);
 
-    assert.ok(state.html.includes("large-archive/data.js"));
+    expect(state.html).toContain("large-archive/data.js");
   });
 
   it("opens text entries from the real custom editor flow", async () => {
@@ -158,13 +180,15 @@ describe("Compress Preview E2E", () => {
     await postEditorMessage({ type: "openEntry", path: "docs/manifest.json" });
 
     await waitFor(() => {
-      assert.ok(vscode.window.activeTextEditor, "Expected a text editor to open");
-      assert.strictEqual(vscode.window.activeTextEditor.document.uri.scheme, "compress-preview");
-      assert.ok(vscode.window.activeTextEditor.document.getText().includes('"name": "compress-preview-fixture"'));
+      expect(vscode.window.activeTextEditor).toBeTruthy();
+      expect(vscode.window.activeTextEditor?.document.uri.scheme).toBe("compress-preview");
+      expect(vscode.window.activeTextEditor?.document.getText()).toContain(
+        '"name": "compress-preview-fixture"',
+      );
     });
 
     const state = await getEditorState();
-    assert.deepStrictEqual(state.sentMessages.at(-1), { type: "openResult", success: true });
+    expect(state?.sentMessages.at(-1)).toEqual({ type: "openResult", success: true });
   });
 
   it("opens binary entries and records the preview file path", async () => {
@@ -175,16 +199,18 @@ describe("Compress Preview E2E", () => {
 
     const state = await waitFor(async () => {
       const nextState = await getEditorState();
-      assert.ok(nextState.lastBinaryPreviewPath, "Expected a temp preview path");
-      assert.ok(fs.existsSync(nextState.lastBinaryPreviewPath), "Expected temp preview file to exist");
-      assert.deepStrictEqual(nextState.sentMessages.at(-1), { type: "openResult", success: true });
+      if (!nextState?.lastBinaryPreviewPath) {
+        throw new Error("Binary preview path not yet recorded");
+      }
+      expect(fs.existsSync(nextState.lastBinaryPreviewPath)).toBe(true);
+      expect(nextState.sentMessages.at(-1)).toEqual({ type: "openResult", success: true });
       return nextState;
     });
 
     await clearEditorMessages();
     await postEditorMessage({ type: "openEntry", path: "assets/pixel.png" });
     const reusedState = await getEditorState();
-    assert.strictEqual(reusedState.lastBinaryPreviewPath, state.lastBinaryPreviewPath);
+    expect(reusedState?.lastBinaryPreviewPath).toBe(state.lastBinaryPreviewPath);
   });
 
   it("extracts a single nested entry from the custom editor flow", async () => {
@@ -199,8 +225,8 @@ describe("Compress Preview E2E", () => {
     });
 
     await waitFor(() => {
-      assert.ok(fs.existsSync(targetPath), "Expected extracted entry file to exist");
-      assert.ok(fs.readFileSync(targetPath, "utf8").includes('"compress-preview-fixture"'));
+      expect(fs.existsSync(targetPath)).toBe(true);
+      expect(fs.readFileSync(targetPath, "utf8")).toContain('"compress-preview-fixture"');
     });
 
     fs.rmSync(targetDir, { recursive: true, force: true });
@@ -218,7 +244,7 @@ describe("Compress Preview E2E", () => {
 
     await waitFor(() => {
       const extractedPath = path.join(targetDir, "docs", "manifest.json");
-      assert.ok(fs.existsSync(extractedPath), "Expected extracted entry file to exist");
+      expect(fs.existsSync(extractedPath)).toBe(true);
     });
 
     fs.rmSync(targetDir, { recursive: true, force: true });
@@ -233,8 +259,10 @@ describe("Compress Preview E2E", () => {
     await postEditorMessage({ type: "extractAll" });
 
     await waitFor(() => {
-      assert.ok(fs.existsSync(path.join(defaultDir, "docs", "manifest.json")));
-      assert.ok(fs.readFileSync(path.join(defaultDir, "README.txt"), "utf8").includes("Archive fixture"));
+      expect(fs.existsSync(path.join(defaultDir, "docs", "manifest.json"))).toBe(true);
+      expect(fs.readFileSync(path.join(defaultDir, "README.txt"), "utf8")).toContain(
+        "Archive fixture",
+      );
     });
 
     fs.rmSync(defaultDir, { recursive: true, force: true });
@@ -253,20 +281,20 @@ describe("Compress Preview E2E", () => {
     await postEditorMessage({ type: "extractAll" });
     await waitFor(async () => {
       const state = await getEditorState();
-      assert.deepStrictEqual(state.sentMessages.at(-1), {
+      expect(state?.sentMessages.at(-1)).toEqual({
         type: "extractResult",
         success: false,
         error: "Cancelled",
       });
     });
-    assert.ok(fs.existsSync(path.join(defaultDir, "stale.txt")));
+    expect(fs.existsSync(path.join(defaultDir, "stale.txt"))).toBe(true);
 
     await setEditorOverrides({ nextWarningChoice: "Overwrite" });
     await clearEditorMessages();
     await postEditorMessage({ type: "extractAll" });
     await waitFor(() => {
-      assert.ok(fs.existsSync(path.join(defaultDir, "docs", "manifest.json")));
-      assert.ok(!fs.existsSync(path.join(defaultDir, "stale.txt")));
+      expect(fs.existsSync(path.join(defaultDir, "docs", "manifest.json"))).toBe(true);
+      expect(fs.existsSync(path.join(defaultDir, "stale.txt"))).toBe(false);
     });
 
     const alternateParent = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-extract-all-"));
@@ -278,7 +306,9 @@ describe("Compress Preview E2E", () => {
     await clearEditorMessages();
     await postEditorMessage({ type: "extractAll" });
     await waitFor(() => {
-      assert.ok(fs.existsSync(path.join(alternateParent, "sample-app", "docs", "manifest.json")));
+      expect(fs.existsSync(path.join(alternateParent, "sample-app", "docs", "manifest.json"))).toBe(
+        true,
+      );
     });
 
     fs.rmSync(defaultDir, { recursive: true, force: true });
@@ -290,26 +320,30 @@ describe("Compress Preview E2E", () => {
     const archiveUri = fixtureUri("large-sample.zip");
     const initialState = await openCustomEditorFor(archiveUri);
 
-    assert.ok(
-      initialState.html.includes("Showing a partial entry list") || initialState.html.includes("large-archive/data.js"),
-    );
+    expect(
+      initialState.html.includes("Showing a partial entry list") ||
+        initialState.html.includes("large-archive/data.js"),
+    ).toBe(true);
 
     await setEditorOverrides({ listTimeoutMs: 10_000 });
     await postEditorMessage({ type: "retryLoad" });
     const retriedState = await waitFor(async () => {
       const state = await getEditorState();
-      assert.ok(state.html.includes("large-archive/data.js"));
+      if (!state) {
+        throw new Error("Editor state not available");
+      }
+      expect(state.html).toContain("large-archive/data.js");
       return state;
     });
 
-    assert.ok(retriedState.html.includes("large-archive/data.js"));
+    expect(retriedState.html).toContain("large-archive/data.js");
   });
 
   it("renders a file-not-found error in the custom editor", async () => {
     const missingUri = vscode.Uri.file(path.join(os.tmpdir(), `missing-${Date.now()}.zip`));
     const state = await openCustomEditorFor(missingUri);
 
-    assert.ok(state.html.includes("File not found."));
+    expect(state.html).toContain("File not found.");
   });
 
   it("opens TAR, TGZ, and GZIP archives in the custom editor", async () => {
@@ -323,18 +357,20 @@ describe("Compress Preview E2E", () => {
     await createTarFixture(
       tgzPath,
       [{ name: "docs/readme.txt", content: "Sample TGZ fixture\n" }],
-      { gzip: true },
+      {
+        gzip: true,
+      },
     );
     createGzipFixture(gzipPath, "Sample gzip fixture\n");
 
     const tarState = await openCustomEditorFor(vscode.Uri.file(tarPath));
-    assert.ok(tarState.html.includes("docs/readme.txt"));
+    expect(tarState.html).toContain("docs/readme.txt");
 
     const tgzState = await openCustomEditorFor(vscode.Uri.file(tgzPath));
-    assert.ok(tgzState.html.includes("docs/readme.txt"));
+    expect(tgzState.html).toContain("docs/readme.txt");
 
     const gzipState = await openCustomEditorFor(vscode.Uri.file(gzipPath));
-    assert.ok(gzipState.html.includes("compress-preview-e2e-open.log"));
+    expect(gzipState.html).toContain("compress-preview-e2e-open.log");
 
     fs.rmSync(tarPath, { force: true });
     fs.rmSync(tgzPath, { force: true });
