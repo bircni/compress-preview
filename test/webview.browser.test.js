@@ -112,13 +112,38 @@ function expectAlignedColumns(result, tolerancePx = 2) {
   }
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.setContent(renderHtml({ entries: sampleEntries }));
-  await expect(page.locator("#treeTable")).toBeVisible();
-});
+async function installVsCodeApi(page) {
+  await page.goto("about:blank");
+  await page.evaluate(() => {
+    window.__postedMessages = [];
+    window.__webviewState = null;
+    window.acquireVsCodeApi = () => ({
+      postMessage(message) {
+        window.__postedMessages.push(message);
+      },
+      getState() {
+        return window.__webviewState;
+      },
+      setState(state) {
+        window.__webviewState = state;
+      },
+    });
+  });
+}
 
-test("webview browser test: sort, filters, and a11y controls", async ({ page }) => {
+async function loadWebview(page, initialData) {
+  await installVsCodeApi(page);
+  await page.setContent(renderHtml(initialData));
+}
+
+test.describe("webview core layout", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.setContent(renderHtml({ entries: sampleEntries }));
+    await expect(page.locator("#treeTable")).toBeVisible();
+  });
+
+  test("webview browser test: sort, filters, and a11y controls", async ({ page }) => {
   await expect(page.getByPlaceholder("Search files")).toBeVisible();
   await expect(page.locator('[data-sort="path"]')).toBeVisible();
 
@@ -275,4 +300,202 @@ test("webview browser test: icon columns line up between sibling folders and fil
   expect(metrics.ok).toBe(true);
   expect(Math.abs(metrics.folderTwistie - metrics.fileTwistie)).toBeLessThanOrEqual(2);
   expect(Math.abs(metrics.folderIcon - metrics.fileIcon)).toBeLessThanOrEqual(2);
+  });
+});
+
+test.describe("webview edge cases", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+  });
+
+  test("empty archive hides the table and shows empty status", async ({ page }) => {
+    await page.setContent(renderHtml({ entries: [] }));
+
+    await expect(page.locator("#treeTable")).toBeHidden();
+    await expect(page.locator("#statusText")).toContainText("empty");
+    await expect(page.locator("#summary")).toContainText("No entries");
+  });
+
+  test("initial error replaces the tree and exposes retry", async ({ page }) => {
+    await page.setContent(renderHtml({ error: "Archive is corrupt" }));
+
+    await expect(page.locator("#error")).toHaveText("Archive is corrupt");
+    await expect(page.locator("#treeTable")).toBeHidden();
+    await expect(page.locator("#retryBtn")).toBeVisible();
+  });
+
+  test("partial results show retry inline", async ({ page }) => {
+    await page.setContent(
+      renderHtml({
+        entries: [{ path: "only.txt", name: "only.txt", isDirectory: false, size: 1 }],
+        isPartial: true,
+        message: "Timed out after 10s",
+      }),
+    );
+
+    await expect(page.locator("#partial")).toContainText("Timed out after 10s");
+    await expect(page.locator("#retryBtnInline")).toBeVisible();
+  });
+
+  test("binary and text filters hide the opposite entry types", async ({ page }) => {
+    await page.setContent(
+      renderHtml({
+        entries: [
+          { path: "readme.md", name: "readme.md", isDirectory: false },
+          { path: "image.png", name: "image.png", isDirectory: false },
+        ],
+      }),
+    );
+
+    await page.locator('[data-filter="text"]').click();
+    await expect(fileRowsLocator(page)).toHaveText(["readme.md"]);
+
+    await page.locator('[data-filter="binary"]').click();
+    await expect(fileRowsLocator(page)).toHaveText(["image.png"]);
+  });
+
+  test("search with no matches shows the empty state", async ({ page }) => {
+    await page.setContent(
+      renderHtml({
+        entries: [{ path: "notes.txt", name: "notes.txt", isDirectory: false }],
+      }),
+    );
+
+    await page.getByPlaceholder("Search files").fill("missing-file");
+    await expect(page.locator("#empty")).toBeVisible();
+    await expect(fileRowsLocator(page)).toHaveCount(0);
+  });
+
+  test("kind sort puts folders before files", async ({ page }) => {
+    await page.setContent(
+      renderHtml({
+        entries: [
+          { path: "folder/", name: "folder", isDirectory: true },
+          { path: "small.bin", name: "small.bin", isDirectory: false, compressedSize: 10 },
+          { path: "large.bin", name: "large.bin", isDirectory: false, compressedSize: 500 },
+        ],
+      }),
+    );
+
+    await page.locator('[data-sort="kind"]').click();
+    await page.locator('[data-sort="kind"]').click();
+    const kinds = await page.locator('tbody tr.row [data-col="kind"]').allTextContents();
+    expect(kinds[0]).toBe("Folder");
+  });
+
+  test("compressed sort reorders files by compressed size", async ({ page }) => {
+    await page.setContent(
+      renderHtml({
+        entries: [
+          { path: "small.bin", name: "small.bin", isDirectory: false, compressedSize: 10 },
+          { path: "large.bin", name: "large.bin", isDirectory: false, compressedSize: 500 },
+        ],
+      }),
+    );
+
+    await page.locator('[data-sort="compressed"]').click();
+    await page.locator('[data-sort="compressed"]').click();
+    await expect(fileRowsLocator(page).first()).toHaveText("large.bin");
+  });
+
+  test("collapse all hides nested entries", async ({ page }) => {
+    await page.setContent(renderHtml({ entries: sampleEntries }));
+
+    await page.locator("#collapseAllBtn").click();
+    await expect(fileRowsLocator(page)).toHaveCount(0);
+    await expect(page.locator('.row[data-kind="dir"]')).toHaveCount(1);
+  });
+
+  test("escapes HTML in entry names", async ({ page }) => {
+    await page.setContent(
+      renderHtml({
+        entries: [{ path: "weird<tag>.txt", name: "weird<tag>.txt", isDirectory: false }],
+      }),
+    );
+
+    const html = await page.content();
+    expect(html).toContain("weird&lt;tag&gt;.txt");
+    await expect(page.locator(".rowNameButton")).toHaveText("weird<tag>.txt");
+  });
+
+  test("table stays full width after viewport resize", async ({ page }) => {
+    await page.setContent(renderHtml({ entries: sampleEntries }));
+    await page.setViewportSize({ width: 960, height: 720 });
+
+    const metrics = await page.evaluate(() => {
+      const container = document.querySelector(".treeContainer");
+      const table = document.getElementById("treeTable");
+      return {
+        containerWidth: container.clientWidth,
+        tableWidth: table.getBoundingClientRect().width,
+      };
+    });
+
+    expect(Math.abs(metrics.tableWidth - metrics.containerWidth)).toBeLessThanOrEqual(2);
+  });
+
+  test("sort headers show ascending and descending indicators", async ({ page }) => {
+    await page.setContent(renderHtml({ entries: sampleEntries }));
+
+    await page.locator('[data-sort="size"]').click();
+    await expect(page.locator('[data-sort="size"] .sortMark')).toHaveText(" ↑");
+
+    await page.locator('[data-sort="size"]').click();
+    await expect(page.locator('[data-sort="size"] .sortMark')).toHaveText(" ↓");
+  });
+});
+
+test.describe("webview host messaging", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await loadWebview(page, { entries: sampleEntries });
+    await expect(page.locator("#treeTable")).toBeVisible();
+  });
+
+  test("refresh, open, and copy post messages to the extension host", async ({ page }) => {
+    await page.locator("#refreshBtn").click();
+    await page.evaluate(() => {
+      document.querySelector('.rowAction[data-action="open"][data-path="archive/notes.txt"]')?.click();
+      document.querySelector('.rowAction[data-action="copy"][data-path="archive/notes.txt"]')?.click();
+    });
+
+    const messages = await page.evaluate(() => window.__postedMessages);
+    expect(messages).toEqual([
+      { type: "getEntries" },
+      { type: "openEntry", path: "archive/notes.txt" },
+      { type: "copyPath", path: "archive/notes.txt" },
+    ]);
+  });
+
+  test("inline retry posts retryLoad", async ({ page }) => {
+    await loadWebview(page, {
+      entries: sampleEntries,
+      isPartial: true,
+      message: "Stopped early",
+    });
+
+    await page.locator("#retryBtnInline").click();
+    const messages = await page.evaluate(() => window.__postedMessages);
+    expect(messages).toContainEqual({ type: "retryLoad" });
+  });
+
+  test("column resize persists widths in webview state", async ({ page }) => {
+    const beforeWidth = await page.locator("#treeColgroup col.colSize").evaluate((el) => el.style.width);
+
+    await page.evaluate(() => {
+      const handle = document.querySelector('.colResizeHandle[data-col-key="size"]');
+      const rect = handle.getBoundingClientRect();
+      handle.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: rect.left + 2, clientY: rect.top + 2 }),
+      );
+      document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: rect.left + 40, clientY: rect.top + 2 }));
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+
+    const afterWidth = await page.locator("#treeColgroup col.colSize").evaluate((el) => el.style.width);
+    expect(parseInt(afterWidth, 10)).toBeGreaterThan(parseInt(beforeWidth, 10));
+
+    const state = await page.evaluate(() => window.__webviewState);
+    expect(state?.columnWidths?.size).toBeGreaterThan(88);
+  });
 });
