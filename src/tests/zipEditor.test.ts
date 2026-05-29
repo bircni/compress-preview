@@ -116,7 +116,10 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     }),
   }));
 
-  const mockExtensionContext = { subscriptions: [] as unknown[] };
+  const mockExtensionContext = {
+    subscriptions: [] as unknown[],
+    extensionUri: { fsPath: process.cwd() },
+  };
 
   vi.doMock(
     "vscode",
@@ -196,6 +199,9 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
       cspSource: "vscode-webview:",
       html: "",
       options: {},
+      asWebviewUri: (uri: { fsPath: string }) => ({
+        toString: () => `vscode-webview:/${encodeURIComponent(uri.fsPath)}`,
+      }),
       postMessage,
       onDidReceiveMessage: (handler: typeof messageHandler) => {
         messageHandler = handler;
