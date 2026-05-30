@@ -1,2 +1,2 @@
-ignores: ["rimraf", "depcheck", "vscode", "@vitest/coverage-v8"]
+ignores: ["rimraf", "depcheck", "vscode", "@vitest/coverage-v8", "@vscode/codicons"]
 skip-missing: true
