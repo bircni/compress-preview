@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/bircni/compress-preview/compare/v0.4.0..v0.5.0) - 2026-05-30
+
+### Added
+
+- **(webview)** native table UI with codicons and resizable columns - ([5138677](https://github.com/bircni/compress-preview/commit/51386778209a579468fa98d0ca863417ebeee2d6))
+
+### Internal
+
+- **(ci)** unify e2e workflow and update docs - ([5e4cb3e](https://github.com/bircni/compress-preview/commit/5e4cb3e46fb4ce6f758ce88c89c013b46887c1ad))
+- **(e2e)** migrate extension-host and browser suites to Vitest - ([973e232](https://github.com/bircni/compress-preview/commit/973e2324070b878454abdca70176cb6d40fa85c2))
+- **(webview)** add harness tests and expand unit coverage - ([f38bc55](https://github.com/bircni/compress-preview/commit/f38bc55251c0eb1e6a11ad821813a7ff3a393eb4))
+- **(webview)** expand Playwright browser coverage - ([618d8c0](https://github.com/bircni/compress-preview/commit/618d8c065c018b96cc613d2315e60324d1c84aed))
+- Update dependencies - ([5228624](https://github.com/bircni/compress-preview/commit/5228624de923b54071bffc849eac649aea90ab7c))
+- Adjust unused deps - ([faa072e](https://github.com/bircni/compress-preview/commit/faa072e51725e5b129809382df4342905e43ab8a))
+
 ## [0.4.0](https://github.com/bircni/compress-preview/compare/v0.3.0..v0.4.0) - 2026-05-14
 
 ### Added
