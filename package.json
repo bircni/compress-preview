@@ -1,7 +1,7 @@
 {
   "name": "compress-preview",
   "displayName": "Compress Preview",
-  "description": "VS Code extension: preview ZIP, TAR, and GZIP archive contents directly in the editor",
+  "description": "VS Code extension: preview ZIP, TAR, GZIP, EPUB, DOCX, PPTX, and XLSX archive contents directly in the editor",
   "publisher": "bircni",
   "version": "0.5.0",
   "icon": "assets/icon.png",
@@ -24,6 +24,14 @@
     "apk",
     "vsix",
     "xpi",
+    "epub",
+    "docx",
+    "pptx",
+    "xlsx",
+    "odt",
+    "ods",
+    "odp",
+    "nupkg",
     "preview",
     "archive",
     "vscode",
@@ -141,6 +149,14 @@
             "type": "string"
           },
           "markdownDescription": "Additional file extensions to treat as text previews (without dots, for example `toml`, `lock`)."
+        },
+        "compress-preview.extraExtensions": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Additional file extensions to open with Compress Preview by default (without dots, for example `odt`, `ods`). Requires a window reload to take effect."
         }
       }
     },
@@ -172,6 +188,51 @@
           },
           {
             "filenamePattern": "*.ear"
+          },
+          {
+            "filenamePattern": "*.epub"
+          },
+          {
+            "filenamePattern": "*.docx"
+          },
+          {
+            "filenamePattern": "*.pptx"
+          },
+          {
+            "filenamePattern": "*.xlsx"
+          },
+          {
+            "filenamePattern": "*.odt"
+          },
+          {
+            "filenamePattern": "*.ods"
+          },
+          {
+            "filenamePattern": "*.odp"
+          },
+          {
+            "filenamePattern": "*.aar"
+          },
+          {
+            "filenamePattern": "*.crx"
+          },
+          {
+            "filenamePattern": "*.nupkg"
+          },
+          {
+            "filenamePattern": "*.cbz"
+          },
+          {
+            "filenamePattern": "*.kmz"
+          },
+          {
+            "filenamePattern": "*.ipa"
+          },
+          {
+            "filenamePattern": "*.appx"
+          },
+          {
+            "filenamePattern": "*.msix"
           },
           {
             "filenamePattern": "*.tar"

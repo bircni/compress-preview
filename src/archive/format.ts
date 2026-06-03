@@ -11,6 +11,21 @@ export const ZIP_BASED_ARCHIVE_EXTENSIONS = [
   ".whl",
   ".war",
   ".ear",
+  ".epub",
+  ".docx",
+  ".pptx",
+  ".xlsx",
+  ".odt",
+  ".ods",
+  ".odp",
+  ".aar",
+  ".crx",
+  ".nupkg",
+  ".cbz",
+  ".kmz",
+  ".ipa",
+  ".appx",
+  ".msix",
 ] as const;
 
 export const TAR_ARCHIVE_EXTENSIONS = [".tar"] as const;
