@@ -1,7 +1,7 @@
-import { EventEmitter } from "events";
-import * as fs from "fs";
-import * as path from "path";
-import { PassThrough } from "stream";
+import { EventEmitter } from "node:events";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { PassThrough } from "node:stream";
 import * as yauzl from "yauzl";
 import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 import { extractAll, extractEntry } from "../archive/extract";
@@ -48,7 +48,7 @@ describe("extract mocked branches", () => {
   });
 
   it("rejects extractEntry when no zipfile is returned", async () => {
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, undefined));
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null));
 
     await expect(extractEntry("zip.zip", "file.txt", path.join(tmpDir, "out.txt"))).rejects.toThrow(
       "Failed to open zip",
@@ -70,7 +70,7 @@ describe("extract mocked branches", () => {
 
   it("rejects extractEntry when openReadStream returns no stream", async () => {
     const zipfile = new FakeZipFile();
-    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, undefined));
+    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null));
     openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractEntry("zip.zip", "file.txt", path.join(tmpDir, "out.txt"));
@@ -112,7 +112,7 @@ describe("extract mocked branches", () => {
   });
 
   it("rejects extractAll when no zipfile is returned", async () => {
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, undefined));
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null));
 
     await expect(
       extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true }),
@@ -159,7 +159,7 @@ describe("extract mocked branches", () => {
 
   it("rejects extractAll when an entry stream is missing", async () => {
     const zipfile = new FakeZipFile();
-    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, undefined));
+    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null));
     openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = extractAll("zip.zip", path.join(tmpDir, "out"), { overwrite: true });

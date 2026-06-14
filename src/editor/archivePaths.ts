@@ -1,7 +1,7 @@
-import { createHash } from "crypto";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import { createHash } from "node:crypto";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 const TEMP_PREVIEW_ROOT = path.join(os.tmpdir(), "compress-preview");
 
@@ -10,7 +10,7 @@ export const DEFAULT_TEMP_PREVIEW_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 
 export function normalizeArchiveEntrySegments(entryPath: string): string[] {
   const segments = entryPath
-    .replace(/\\/g, "/")
+    .replaceAll("\\", "/")
     .replace(/^\.\//, "")
     .split("/")
     .filter((segment) => segment.length > 0 && segment !== ".");

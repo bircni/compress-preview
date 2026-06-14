@@ -28,7 +28,7 @@ describe("zipEditorTestBridge", () => {
 
     const bridge =
       (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
-    const handleMessage = vi.fn().mockResolvedValue(undefined);
+    const handleMessage = vi.fn().mockResolvedValue();
 
     expect(bridge.getZipEditorTestListTimeoutMs(10_000)).toBe(10_000);
     bridge.setZipEditorTestOverrides({ listTimeoutMs: 1 });

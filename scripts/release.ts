@@ -13,18 +13,18 @@ import { execSync } from "node:child_process";
 function run(cmd: string, opts: { stdio?: "pipe" | "inherit" } = {}): string {
   try {
     return execSync(cmd, { stdio: "pipe", encoding: "utf8", ...opts }).trim();
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Command failed: ${cmd}\n${message}`, { cause: err });
+  } catch (error_: unknown) {
+    const message = error_ instanceof Error ? error_.message : String(error_);
+    throw new Error(`Command failed: ${cmd}\n${message}`, { cause: error_ });
   }
 }
 
 function log(msg: string): void {
-  console.log(`\x1b[36m${msg}\x1b[0m`);
+  console.log(`\u001B[36m${msg}\u001B[0m`);
 }
 
 function error(msg: string): void {
-  console.error(`\x1b[31m${msg}\x1b[0m`);
+  console.error(`\u001B[31m${msg}\u001B[0m`);
 }
 
 function parseArgs(argv: string[]): { customVersion: string | null | undefined } {
@@ -39,7 +39,7 @@ function parseArgs(argv: string[]): { customVersion: string | null | undefined }
       continue;
     }
     if (arg.startsWith("--version=")) {
-      customVersion = arg.split("=")[1];
+      customVersion = arg.split("=", 2)[1];
       continue;
     }
   }
@@ -119,12 +119,12 @@ try {
   console.log(
     `  2. If you need to undo, run:\n     git reset --hard HEAD~1\n     git tag -d ${tagVersion}`,
   );
-} catch (err: unknown) {
+} catch (error_: unknown) {
   error("Release failed:");
-  const message = err instanceof Error ? err.message : String(err);
+  const message = error_ instanceof Error ? error_.message : String(error_);
   error(message);
-  if (err instanceof Error && err.stack && process.env.DEBUG) {
-    console.error(err.stack);
+  if (error_ instanceof Error && error_.stack && process.env.DEBUG) {
+    console.error(error_.stack);
   }
   process.exit(1);
 }

@@ -1,0 +1,6 @@
+{
+  "entry": ["scripts/**/*.ts", "src/e2e/setupExtensionHost.ts"],
+  "project": ["src/**/*.ts", "scripts/**/*.ts"],
+  "ignoreDependencies": ["@vscode/codicons"],
+  "ignoreBinaries": ["ovsx", "code", "cursor"]
+}

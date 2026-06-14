@@ -3,10 +3,10 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import tar from "tar-stream";
-import * as zlib from "zlib";
+import * as zlib from "node:zlib";
 import yazl from "yazl";
 import { extractAllTargetDir, extractEntry, extractAll } from "../archive/extract";
 

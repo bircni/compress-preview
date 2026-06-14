@@ -142,19 +142,23 @@ async function assertZipBasedFixtureContents(relativePath: string): Promise<void
     }
   }
 
-  const readme = (await readZipEntry(archivePath, "README.txt")).toString("utf8");
+  const readmeBuffer = await readZipEntry(archivePath, "README.txt");
+  const readme = readmeBuffer.toString("utf8");
   if (!readme.includes("Archive fixture for supported ZIP-based formats.")) {
     throw new Error(`Fixture ${relativePath} has unexpected README.txt contents`);
   }
 
-  const manifest = JSON.parse(
-    (await readZipEntry(archivePath, "docs/manifest.json")).toString("utf8"),
-  ) as { name?: string; entry?: string };
+  const manifestBuffer = await readZipEntry(archivePath, "docs/manifest.json");
+  const manifest = JSON.parse(manifestBuffer.toString("utf8")) as {
+    name?: string;
+    entry?: string;
+  };
   if (manifest.name !== "compress-preview-fixture" || manifest.entry !== "README.txt") {
     throw new Error(`Fixture ${relativePath} has unexpected docs/manifest.json contents`);
   }
 
-  const config = (await readZipEntry(archivePath, "assets/config.ini")).toString("utf8");
+  const configBuffer = await readZipEntry(archivePath, "assets/config.ini");
+  const config = configBuffer.toString("utf8");
   if (config !== "[fixture]\nmode=example\n") {
     throw new Error(`Fixture ${relativePath} has unexpected assets/config.ini contents`);
   }

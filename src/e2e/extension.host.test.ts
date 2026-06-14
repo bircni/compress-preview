@@ -4,7 +4,7 @@ import path from "node:path";
 import tar from "tar-stream";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as vscode from "vscode";
-import zlib from "zlib";
+import zlib from "node:zlib";
 
 function fixtureUri(fileName: string): vscode.Uri {
   return vscode.Uri.file(path.resolve(__dirname, "..", "..", ".fixtures", fileName));

@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 /** Optional initial data embedded in HTML so the first paint does not rely on postMessage. */
 export type InitialEntriesPayload = {
@@ -50,14 +50,14 @@ export function getInitialHtml(
   options?: InitialHtmlOptions,
 ): string {
   const initialScript =
-    initialData != null
-      ? `<script id="initial-entries" type="application/json">${JSON.stringify({
+    initialData == null
+      ? ""
+      : `<script id="initial-entries" type="application/json">${JSON.stringify({
           entries: initialData.entries,
           isPartial: initialData.isPartial,
           message: initialData.message,
           error: initialData.error,
-        }).replace(/</g, "\\u003c")}</script>`
-      : "";
+        }).replaceAll("<", "\\u003c")}</script>`;
 
   const codiconsStyleHref = options?.codiconsStyleHref ?? "";
 

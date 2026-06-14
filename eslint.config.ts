@@ -1,6 +1,7 @@
 import eslint from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import eslintConfigPrettier from "eslint-config-prettier";
+import unicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
 // ESLint flat config for VS Code extension
@@ -9,6 +10,7 @@ export default defineConfig([
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
+  unicorn.configs.recommended,
   {
     languageOptions: {
       parserOptions: {
@@ -102,6 +104,23 @@ export default defineConfig([
       // Prefer catching unknown and narrowing (aligns with strict TypeScript)
       "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
 
+      // unicorn overrides — disable rules that conflict with project style or build target
+      "unicorn/prevent-abbreviations": "off", // codebase uses err, msg, ext, deps, etc.
+      "unicorn/prefer-module": "off", // CJS build target (esbuild --format=cjs)
+      "unicorn/no-null": "off", // VS Code APIs return/accept null widely
+      "unicorn/no-array-reduce": "off", // reduce is used intentionally
+      "unicorn/no-array-for-each": "off", // forEach is idiomatic in this codebase
+      "unicorn/prefer-top-level-await": "off", // module entry points use async functions
+      "unicorn/no-process-exit": "off", // scripts use process.exit
+      "unicorn/import-style": "off", // conflicts with existing named import style
+      "unicorn/prefer-event-target": "off", // Node.js EventEmitter used by streams
+      "unicorn/prefer-string-raw": "off", // regex literals are already raw
+      "unicorn/switch-case-braces": "off", // conflicts with prettier formatting
+      "unicorn/filename-case": [
+        "warn",
+        { cases: { camelCase: true, kebabCase: true, pascalCase: true } },
+      ],
+
       // Numbers/booleans in template literals are intentional (logs, markdown tables)
       "@typescript-eslint/restrict-template-expressions": [
         "error",
@@ -141,6 +160,9 @@ export default defineConfig([
   {
     files: ["**/__mocks__/**", "**/__tests__/**", "**/*.test.ts", "**/*.test.js"],
     rules: {
+      // false positive: ArchiveTreeNode.children is not a DOM children property
+      "unicorn/better-dom-traversing": "off",
+      "@typescript-eslint/no-empty-function": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/no-var-requires": "off",

@@ -23,7 +23,7 @@ type CollectedFile = { absolutePath: string; archivePath: string };
 function collectFiles(dir: string, rootDirForNames: string): CollectedFile[] {
   return fs
     .readdirSync(dir, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .toSorted((left, right) => left.name.localeCompare(right.name))
     .flatMap((entry) => {
       const absolutePath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -33,7 +33,7 @@ function collectFiles(dir: string, rootDirForNames: string): CollectedFile[] {
       return [
         {
           absolutePath,
-          archivePath: path.relative(rootDirForNames, absolutePath).replace(/\\/g, "/"),
+          archivePath: path.relative(rootDirForNames, absolutePath).replaceAll("\\", "/"),
         },
       ];
     });
@@ -55,7 +55,7 @@ async function writeZipArchive(targetFile: string, sourceDir: string): Promise<v
     for (const file of files) {
       zipFile.addFile(file.absolutePath, file.archivePath, {
         mtime: FIXTURE_DATE,
-        mode: 0o100644,
+        mode: 0o10_0644,
         compress: true,
         forceDosTimestamp: true,
       });

@@ -1,7 +1,7 @@
-import { EventEmitter } from "events";
-import * as fs from "fs";
-import * as path from "path";
-import { PassThrough } from "stream";
+import { EventEmitter } from "node:events";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { PassThrough } from "node:stream";
 import * as yauzl from "yauzl";
 import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 import { listEntries, openEntryReadStream } from "../archive/archive";
@@ -48,7 +48,7 @@ describe("archive mocked branches", () => {
   });
 
   it("rejects listEntries when no zipfile is returned", async () => {
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, undefined));
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null));
 
     await expect(listEntries(archivePath)).rejects.toThrow("Failed to open zip");
   });
@@ -140,7 +140,7 @@ describe("archive mocked branches", () => {
   });
 
   it("rejects when openEntryReadStream gets no zipfile", async () => {
-    openMock.mockImplementation((_zipPath, _options, cb) => cb(null, undefined));
+    openMock.mockImplementation((_zipPath, _options, cb) => cb(null));
 
     await expect(openEntryReadStream(archivePath, "a.txt")).rejects.toThrow("Failed to open zip");
   });
@@ -159,7 +159,7 @@ describe("archive mocked branches", () => {
 
   it("rejects when openEntryReadStream gets no stream", async () => {
     const zipfile = new FakeZipFile();
-    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null, undefined));
+    zipfile.openReadStream.mockImplementation((_entry, cb) => cb(null));
     openMock.mockImplementation((_zipPath, _options, cb) => cb(null, zipfile));
 
     const pending = openEntryReadStream(archivePath, "file.txt");

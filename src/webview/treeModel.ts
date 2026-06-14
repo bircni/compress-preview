@@ -9,7 +9,7 @@ export type ArchiveTreeNode = {
 };
 
 function normalizePath(inputPath: string): string {
-  return inputPath.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/$/, "");
+  return inputPath.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
 }
 
 function compareEntries(a: ArchiveEntry, b: ArchiveEntry): number {
@@ -26,8 +26,8 @@ function compareEntries(a: ArchiveEntry, b: ArchiveEntry): number {
     if (index >= bParts.length) {
       return 1;
     }
-    const aPart = aParts[index];
-    const bPart = bParts[index];
+    const aPart = aParts[index] ?? "";
+    const bPart = bParts[index] ?? "";
     if (aPart !== bPart) {
       return aPart.localeCompare(bPart, undefined, { numeric: true, sensitivity: "base" });
     }
@@ -89,46 +89,43 @@ function ensureFolderNode(
 
 function sortNodeChildren(node: ArchiveTreeNode): void {
   node.children.sort((left, right) => compareEntries(left.entry, right.entry));
-  node.children.forEach(sortNodeChildren);
+  for (const child of node.children) sortNodeChildren(child);
 }
 
 export function buildArchiveTree(entries: ArchiveEntry[]): ArchiveTreeNode[] {
   const rootNodes: ArchiveTreeNode[] = [];
   const nodeMap = new Map<string, ArchiveTreeNode>();
 
-  entries
-    .slice()
-    .sort(compareEntries)
-    .forEach((rawEntry) => {
-      const normalizedPath = normalizePath(rawEntry.path || rawEntry.name || "");
-      const parentPath = normalizedPath.includes("/")
-        ? normalizedPath.slice(0, normalizedPath.lastIndexOf("/"))
-        : "";
-      const parentNode = ensureFolderNode(nodeMap, rootNodes, parentPath);
-      const nextEntry: ArchiveEntry = {
-        path: rawEntry.path,
-        name: rawEntry.name,
-        isDirectory: rawEntry.isDirectory,
-        size: rawEntry.size,
-        compressedSize: rawEntry.compressedSize,
-        mtime: rawEntry.mtime,
-      };
-      const existingNode = nodeMap.get(normalizedPath);
-      if (existingNode) {
-        existingNode.entry = nextEntry;
-        existingNode.synthetic = false;
-        return;
-      }
-      const nextNode = createNode(nextEntry, parentPath, false);
-      nodeMap.set(normalizedPath, nextNode);
-      if (parentNode) {
-        parentNode.children.push(nextNode);
-      } else {
-        rootNodes.push(nextNode);
-      }
-    });
+  entries.toSorted(compareEntries).forEach((rawEntry) => {
+    const normalizedPath = normalizePath(rawEntry.path || rawEntry.name || "");
+    const parentPath = normalizedPath.includes("/")
+      ? normalizedPath.slice(0, normalizedPath.lastIndexOf("/"))
+      : "";
+    const parentNode = ensureFolderNode(nodeMap, rootNodes, parentPath);
+    const nextEntry: ArchiveEntry = {
+      path: rawEntry.path,
+      name: rawEntry.name,
+      isDirectory: rawEntry.isDirectory,
+      ...(rawEntry.size !== undefined && { size: rawEntry.size }),
+      ...(rawEntry.compressedSize !== undefined && { compressedSize: rawEntry.compressedSize }),
+      ...(rawEntry.mtime !== undefined && { mtime: rawEntry.mtime }),
+    };
+    const existingNode = nodeMap.get(normalizedPath);
+    if (existingNode) {
+      existingNode.entry = nextEntry;
+      existingNode.synthetic = false;
+      return;
+    }
+    const nextNode = createNode(nextEntry, parentPath, false);
+    nodeMap.set(normalizedPath, nextNode);
+    if (parentNode) {
+      parentNode.children.push(nextNode);
+    } else {
+      rootNodes.push(nextNode);
+    }
+  });
 
   rootNodes.sort((left, right) => compareEntries(left.entry, right.entry));
-  rootNodes.forEach(sortNodeChildren);
+  for (const node of rootNodes) sortNodeChildren(node);
   return rootNodes;
 }

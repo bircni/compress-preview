@@ -2,9 +2,9 @@
  * Extract single entry or all entries to disk.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import * as zlib from "zlib";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as zlib from "node:zlib";
 import tar from "tar-stream";
 import * as yauzl from "yauzl";
 import { detectArchiveKind, getGzipEntryName, stripSupportedArchiveExtension } from "./format";
@@ -25,7 +25,7 @@ export function extractAllTargetDir(archivePath: string): string {
 }
 
 function resolveArchiveDestination(rootDir: string, entryName: string): string {
-  const normalizedName = entryName.replace(/\\/g, "/");
+  const normalizedName = entryName.replaceAll("\\", "/");
   const safeSegments = normalizedName
     .split("/")
     .filter((segment) => segment.length > 0 && segment !== ".");
@@ -162,7 +162,7 @@ function extractTarEntry(
   return new Promise((resolve, reject) => {
     const { source, input, destroy } = createTarInputStream(archivePath, archiveKind);
     const extract = tar.extract();
-    const wantPath = entryPath.replace(/^\.\//, "").replace(/\\/g, "/");
+    const wantPath = entryPath.replace(/^\.\//, "").replaceAll("\\", "/");
     let settled = false;
 
     const finishWithError = (error: unknown) => {
@@ -176,7 +176,7 @@ function extractTarEntry(
     };
 
     extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
-      const normalizedPath = header.name.replace(/\\/g, "/").replace(/\/$/, "");
+      const normalizedPath = header.name.replaceAll("\\", "/").replace(/\/$/, "");
       if (normalizedPath !== wantPath && header.name !== entryPath) {
         stream.resume();
         stream.on("end", () => {

@@ -1,8 +1,8 @@
-import * as path from "path";
+import * as path from "node:path";
 
 export type ArchiveKind = "zip" | "tar" | "tgz" | "gz";
 
-export const ZIP_BASED_ARCHIVE_EXTENSIONS = [
+const ZIP_BASED_ARCHIVE_EXTENSIONS = [
   ".zip",
   ".jar",
   ".apk",
@@ -13,11 +13,11 @@ export const ZIP_BASED_ARCHIVE_EXTENSIONS = [
   ".ear",
 ] as const;
 
-export const TAR_ARCHIVE_EXTENSIONS = [".tar"] as const;
-export const TGZ_ARCHIVE_EXTENSIONS = [".tgz", ".tar.gz"] as const;
-export const GZIP_ARCHIVE_EXTENSIONS = [".gz"] as const;
+const TAR_ARCHIVE_EXTENSIONS = [".tar"] as const;
+const TGZ_ARCHIVE_EXTENSIONS = [".tgz", ".tar.gz"] as const;
+const GZIP_ARCHIVE_EXTENSIONS = [".gz"] as const;
 
-export const SUPPORTED_ARCHIVE_EXTENSIONS = [
+const SUPPORTED_ARCHIVE_EXTENSIONS = [
   ...ZIP_BASED_ARCHIVE_EXTENSIONS,
   ...TAR_ARCHIVE_EXTENSIONS,
   ...TGZ_ARCHIVE_EXTENSIONS,

@@ -28,11 +28,7 @@ let activeZipEditorTestSession: ActiveZipEditorTestSession | undefined;
 
 export function setZipEditorTestOverrides(overrides: ZipEditorTestOverrides): void {
   if ("listTimeoutMs" in overrides) {
-    if (overrides.listTimeoutMs == null) {
-      delete zipEditorTestOverrides.listTimeoutMs;
-    } else {
-      zipEditorTestOverrides.listTimeoutMs = overrides.listTimeoutMs;
-    }
+    zipEditorTestOverrides.listTimeoutMs = overrides.listTimeoutMs;
   }
 
   if ("nextOpenDialogPaths" in overrides) {
@@ -70,7 +66,9 @@ export function getZipEditorTestState(): ZipEditorTestState | undefined {
     zipPath: activeZipEditorTestSession.zipPath,
     html: activeZipEditorTestSession.getHtml(),
     sentMessages: [...activeZipEditorTestSession.sentMessages],
-    lastBinaryPreviewPath: activeZipEditorTestSession.lastBinaryPreviewPath,
+    ...(activeZipEditorTestSession.lastBinaryPreviewPath !== undefined && {
+      lastBinaryPreviewPath: activeZipEditorTestSession.lastBinaryPreviewPath,
+    }),
   };
 }
 
@@ -93,7 +91,6 @@ export function setActiveZipEditorTestSession(session: {
     zipPath: session.zipPath,
     getHtml: session.getHtml,
     sentMessages: [],
-    lastBinaryPreviewPath: undefined,
     handleMessage: session.handleMessage,
   };
 }
@@ -122,26 +119,33 @@ export function setZipEditorTestBinaryPreviewPath(owner: unknown, previewPath: s
   activeSession.lastBinaryPreviewPath = previewPath;
 }
 
-export function createZipEditorOpenDialogHandler(): ZipEditorControllerDeps["showOpenDialog"] {
-  return async (options) => {
-    if (zipEditorTestOverrides.nextOpenDialogPaths !== undefined) {
-      const configuredPaths = zipEditorTestOverrides.nextOpenDialogPaths;
-      zipEditorTestOverrides.nextOpenDialogPaths = undefined;
-      return configuredPaths?.map((entryPath) => vscode.Uri.file(entryPath));
-    }
+async function zipEditorOpenDialogHandler(
+  options: Parameters<ZipEditorControllerDeps["showOpenDialog"]>[0],
+): ReturnType<ZipEditorControllerDeps["showOpenDialog"]> {
+  if (zipEditorTestOverrides.nextOpenDialogPaths !== undefined) {
+    const configuredPaths = zipEditorTestOverrides.nextOpenDialogPaths;
+    delete zipEditorTestOverrides.nextOpenDialogPaths;
+    return configuredPaths?.map((entryPath) => vscode.Uri.file(entryPath));
+  }
+  return vscode.window.showOpenDialog(options);
+}
 
-    return vscode.window.showOpenDialog(options);
-  };
+async function zipEditorWarningMessageHandler(
+  message: Parameters<ZipEditorControllerDeps["showWarningMessage"]>[0],
+  ...items: Parameters<ZipEditorControllerDeps["showWarningMessage"]>[1][]
+): ReturnType<ZipEditorControllerDeps["showWarningMessage"]> {
+  if (zipEditorTestOverrides.nextWarningChoice !== undefined) {
+    const nextChoice = zipEditorTestOverrides.nextWarningChoice;
+    delete zipEditorTestOverrides.nextWarningChoice;
+    return nextChoice ?? undefined;
+  }
+  return vscode.window.showWarningMessage(message, ...items);
+}
+
+export function createZipEditorOpenDialogHandler(): ZipEditorControllerDeps["showOpenDialog"] {
+  return zipEditorOpenDialogHandler;
 }
 
 export function createZipEditorWarningMessageHandler(): ZipEditorControllerDeps["showWarningMessage"] {
-  return async (message, ...items) => {
-    if (zipEditorTestOverrides.nextWarningChoice !== undefined) {
-      const nextChoice = zipEditorTestOverrides.nextWarningChoice;
-      zipEditorTestOverrides.nextWarningChoice = undefined;
-      return nextChoice ?? undefined;
-    }
-
-    return vscode.window.showWarningMessage(message, ...items);
-  };
+  return zipEditorWarningMessageHandler;
 }
