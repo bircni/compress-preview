@@ -101,6 +101,7 @@
     "eslint": "10.5.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-unicorn": "^65.0.1",
+    "glob": "^13.0.6",
     "jiti": "2.7.0",
     "jsdom": "29.1.1",
     "knip": "^6.16.1",
