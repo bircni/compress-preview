@@ -26,6 +26,21 @@ const ZIP_BASED_FIXTURES = [
   "sample-wheel.whl",
   "sample-webapp.war",
   "sample-enterprise.ear",
+  "sample-ebook.epub",
+  "sample-document.docx",
+  "sample-presentation.pptx",
+  "sample-spreadsheet.xlsx",
+  "sample-text.odt",
+  "sample-spreadsheet2.ods",
+  "sample-presentation2.odp",
+  "sample-android-lib.aar",
+  "sample-extension.crx",
+  "sample-package.nupkg",
+  "sample-comic.cbz",
+  "sample-map.kmz",
+  "sample-ios-app.ipa",
+  "sample-windows-app.appx",
+  "sample-windows-store.msix",
 ];
 
 type TarFixtureEntry = {

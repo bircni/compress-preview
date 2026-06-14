@@ -176,6 +176,26 @@ describe("Compress Preview extension host", () => {
     assert.ok(state.html.includes("large-archive/data.js"));
   });
 
+  it("opens the new zip-based format fixtures in the custom editor", async () => {
+    const fixtures = [
+      "sample-ebook.epub",
+      "sample-document.docx",
+      "sample-presentation.pptx",
+      "sample-spreadsheet.xlsx",
+      "sample-android-lib.aar",
+      "sample-comic.cbz",
+      "sample-ios-app.ipa",
+      "sample-windows-app.appx",
+    ];
+    for (const fixture of fixtures) {
+      const state = await openCustomEditorFor(fixtureUri(fixture));
+      assert.ok(
+        state.html.includes("docs/manifest.json"),
+        `Expected ${fixture} to show entry listing`,
+      );
+    }
+  });
+
   it("opens text entries from the real custom editor flow", async () => {
     await openCustomEditorFor(fixtureUri("sample-app.apk"));
     await clearEditorMessages();
