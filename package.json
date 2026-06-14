@@ -155,14 +155,6 @@
             "type": "string"
           },
           "markdownDescription": "Additional file extensions to treat as text previews (without dots, for example `toml`, `lock`)."
-        },
-        "compress-preview.extraExtensions": {
-          "type": "array",
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "markdownDescription": "Additional file extensions to open with Compress Preview by default (without dots, for example `odt`, `ods`). Requires a window reload to take effect."
         }
       }
     },
