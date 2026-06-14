@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/bircni/compress-preview/compare/v0.5.0..v0.6.0) - 2026-06-14
+
+### Added
+
+- add more zip extensions ([#13](https://github.com/bircni/compress-preview/issues/13)) - ([553025c](https://github.com/bircni/compress-preview/commit/553025c53c9e40c5665fe06f0e166868f2c26814))
+
+### Internal
+
+- **(deps)** Update deps for security reasons ([#11](https://github.com/bircni/compress-preview/issues/11)) - ([b03ec6d](https://github.com/bircni/compress-preview/commit/b03ec6d29da306bd7dffa1ae99697bb033747940))
+- project hygiene — unicorn, strict tsconfig, knip, re-enable e2e CI ([#12](https://github.com/bircni/compress-preview/issues/12)) - ([dd82fae](https://github.com/bircni/compress-preview/commit/dd82fae088c3b48a9050653145b1bd8f16feda94))
+
 ## [0.5.0](https://github.com/bircni/compress-preview/compare/v0.4.0..v0.5.0) - 2026-05-30
 
 ### Added
