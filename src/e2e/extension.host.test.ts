@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import zlib from "node:zlib";
 
 function fixtureUri(fileName: string): vscode.Uri {
-  return vscode.Uri.file(path.resolve(__dirname, "..", "..", "..", ".fixtures", fileName));
+  return vscode.Uri.file(path.resolve(__dirname, "..", "..", ".fixtures", fileName));
 }
 
 function previewUri(archiveUri: vscode.Uri, entryPath: string): vscode.Uri {

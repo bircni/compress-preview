@@ -5,7 +5,7 @@ import mochaRunner from "mocha";
 export async function run(): Promise<void> {
   const mocha = new mochaRunner({ ui: "bdd", color: true, timeout: 60_000 });
   const testsRoot = path.resolve(__dirname, "..");
-  for (const f of globSync("**/*.test.js", { cwd: testsRoot, ignore: ["suite/**"] })) {
+  for (const f of globSync("**/*.host.test.js", { cwd: testsRoot })) {
     mocha.addFile(path.resolve(testsRoot, f));
   }
 
