@@ -1,4 +1,4 @@
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as zipContentProviderModule from "../editor/zipContentProvider";
 
@@ -78,7 +78,7 @@ describe("zipContentProvider", () => {
       path: "/docs/readme.txt",
     } as never);
 
-    const stream = (await openEntryReadStream.mock.results[0].value).stream as PassThrough;
+    const { stream } = (await openEntryReadStream.mock.results[0].value) as { stream: PassThrough };
     queueMicrotask(() => stream.end("path fallback"));
 
     expect(await pending).toBe("path fallback");

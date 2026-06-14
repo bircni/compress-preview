@@ -1,7 +1,7 @@
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
-import { PassThrough } from "stream";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as zipEditorModule from "../editor/zipEditor";
 import type * as zipEditorTestBridgeModule from "../editor/zipEditorTestBridge";
@@ -50,8 +50,8 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     fs.writeFileSync(archivePath, "fixture");
   }
 
-  const executeCommand = vi.fn().mockResolvedValue(undefined);
-  const showTextDocument = vi.fn().mockResolvedValue(undefined);
+  const executeCommand = vi.fn().mockResolvedValue();
+  const showTextDocument = vi.fn().mockResolvedValue();
   const openTextDocument = options.openTextDocumentError
     ? vi.fn().mockRejectedValue(options.openTextDocumentError)
     : vi.fn().mockResolvedValue({ uri: { scheme: "compress-preview" } });
@@ -81,19 +81,19 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
       stream,
     };
   });
-  const extractEntry = vi.fn().mockResolvedValue(undefined);
-  const extractAll = vi.fn().mockResolvedValue(undefined);
+  const extractEntry = vi.fn().mockResolvedValue();
+  const extractAll = vi.fn().mockResolvedValue();
   const extractAllTargetDir = vi
     .fn()
     .mockReturnValue(path.join(path.dirname(archivePath), path.basename(archivePath, ".zip")));
-  const markTempPreviewUsed = vi.fn().mockResolvedValue(undefined);
+  const markTempPreviewUsed = vi.fn().mockResolvedValue();
 
   let messageHandler:
     | ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>)
     | undefined;
 
   let fileWatcherChange: (() => void) | undefined;
-  const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
+  const clipboardWriteText = vi.fn().mockResolvedValue();
   const createFileSystemWatcher = vi.fn(() => ({
     onDidChange: vi.fn((cb: () => void) => {
       fileWatcherChange = cb;
@@ -169,7 +169,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     extractAllTargetDir,
   }));
   vi.doMock("../editor/archivePaths", () => ({
-    cleanupTempPreviews: vi.fn().mockResolvedValue(undefined),
+    cleanupTempPreviews: vi.fn().mockResolvedValue(),
     createTempPreviewPath: vi.fn().mockImplementation((zipPath: string, entryPath: string) => {
       return path.join(os.tmpdir(), "compress-preview", path.basename(zipPath), entryPath);
     }),

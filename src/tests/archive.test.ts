@@ -3,12 +3,12 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as os from "node:os";
 import tar from "tar-stream";
 import yazl from "yazl";
-import * as zlib from "zlib";
+import * as zlib from "node:zlib";
 import {
   listEntries,
   getArchiveSizeBytes,
@@ -238,7 +238,6 @@ describe("archive", () => {
         expect.objectContaining({
           path: "nested/",
           isDirectory: true,
-          size: undefined,
         }),
         expect.objectContaining({
           path: "nested/file.txt",

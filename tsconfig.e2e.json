@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "out/e2e",
+    "rootDir": "src/e2e",
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src/e2e/**/*.ts"],
+  "exclude": ["src/e2e/webview.browser.launcher.test.ts"]
+}

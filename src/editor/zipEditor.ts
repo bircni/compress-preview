@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { listEntries, openEntryReadStream } from "../archive/archive";
 import { extractEntry, extractAll, extractAllTargetDir } from "../archive/extract";
@@ -31,7 +31,7 @@ function clampListTimeoutMs(value: number, fallback: number): number {
   if (!Number.isFinite(value)) {
     return fallback;
   }
-  return Math.min(300_000, Math.max(1_000, Math.round(value)));
+  return Math.min(300_000, Math.max(1000, Math.round(value)));
 }
 
 function readListTimeoutMs(): number {

@@ -2,10 +2,10 @@
  * Archive abstraction over ZIP/TAR/GZIP containers.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { PassThrough } from "stream";
-import * as zlib from "zlib";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { PassThrough } from "node:stream";
+import * as zlib from "node:zlib";
 import tar from "tar-stream";
 import * as yauzl from "yauzl";
 import type { ArchiveEntry, EntryContentStream } from "./entry";
@@ -39,21 +39,21 @@ function createArchiveEntry(
     path: entryPath,
     name: path.basename(normalizedName) || normalizedName,
     isDirectory: options.isDirectory,
-    size: options.size,
-    compressedSize: options.compressedSize,
-    mtime: options.mtime,
+    ...(options.size !== undefined && { size: options.size }),
+    ...(options.compressedSize !== undefined && { compressedSize: options.compressedSize }),
+    ...(options.mtime !== undefined && { mtime: options.mtime }),
   };
 }
 
 function createTarEntry(header: tar.Headers): ArchiveEntry {
-  const normalizedPath = header.name.replace(/\\/g, "/");
+  const normalizedPath = header.name.replaceAll("\\", "/");
   const isDirectory = header.type === "directory" || normalizedPath.endsWith("/");
   return createArchiveEntry(
     isDirectory ? `${normalizedPath.replace(/\/$/, "")}/` : normalizedPath,
     {
       isDirectory,
-      size: isDirectory ? undefined : header.size,
-      mtime: header.mtime instanceof Date ? header.mtime : undefined,
+      ...(!isDirectory && header.size !== undefined && { size: header.size }),
+      ...(header.mtime instanceof Date && { mtime: header.mtime }),
     },
   );
 }
@@ -141,7 +141,7 @@ function listZipEntries(
           entries.push(
             createArchiveEntry(entry.fileName, {
               isDirectory,
-              size: isDirectory ? undefined : entry.uncompressedSize,
+              ...(isDirectory ? {} : { size: entry.uncompressedSize }),
               compressedSize: entry.compressedSize,
               mtime: entry.getLastModDate(),
             }),
@@ -282,7 +282,7 @@ function openZipEntryReadStream(
           return;
         }
 
-        const wantPath = entryPath.replace(/^\.\//, "").replace(/\\/g, "/");
+        const wantPath = entryPath.replace(/^\.\//, "").replaceAll("\\", "/");
         let settled = false;
         let zipClosed = false;
         const closeZipfile = () => {
@@ -299,7 +299,7 @@ function openZipEntryReadStream(
           }
           const entryPathNorm = entry.fileName
             .replace(/^\.\//, "")
-            .replace(/\\/g, "/")
+            .replaceAll("\\", "/")
             .replace(/\/$/, "");
           if (
             entryPathNorm !== wantPath &&
@@ -377,7 +377,7 @@ function openTarEntryReadStream(
   return new Promise((resolve, reject) => {
     const { source, input, destroy } = createTarInputStream(archivePath, archiveKind);
     const extract = tar.extract();
-    const wantPath = entryPath.replace(/^\.\//, "").replace(/\\/g, "/");
+    const wantPath = entryPath.replace(/^\.\//, "").replaceAll("\\", "/");
     let settled = false;
 
     const closeWithError = (error: unknown) => {
@@ -391,7 +391,7 @@ function openTarEntryReadStream(
     };
 
     extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
-      const normalizedPath = header.name.replace(/\\/g, "/").replace(/\/$/, "");
+      const normalizedPath = header.name.replaceAll("\\", "/").replace(/\/$/, "");
       if (
         normalizedPath !== wantPath &&
         header.name !== entryPath &&

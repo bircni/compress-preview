@@ -1,5 +1,5 @@
-import * as path from "path";
-import * as fs from "fs";
+import * as path from "node:path";
+import * as fs from "node:fs";
 import type * as vscode from "vscode";
 import type { EntryContentStream } from "../archive/entry";
 import type { ListEntriesOptions, ListEntriesResult } from "../archive/archive";
@@ -157,20 +157,22 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
             ? deps.listTimeoutMs()
             : (deps.listTimeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
-      const entriesForWebview = result.entries.map((entry) => ({
-        ...entry,
-        mtime: entry.mtime instanceof Date ? entry.mtime.toISOString() : entry.mtime,
+      const entriesForWebview = result.entries.map(({ mtime, ...rest }) => ({
+        ...rest,
+        ...(mtime !== undefined && {
+          mtime: mtime instanceof Date ? mtime.toISOString() : mtime,
+        }),
       }));
       deps.setHtml(
         deps.getInitialHtml(deps.cspSource, {
           entries: entriesForWebview,
           isPartial: result.isPartial,
-          message: result.message,
+          ...(result.message !== undefined && { message: result.message }),
         }),
       );
       deps.reveal();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       deps.setHtml(deps.getInitialHtml(deps.cspSource, { error: message }));
     }
   };
@@ -186,9 +188,9 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
       try {
         await deps.writeClipboardText(msg.path);
         await postMessage({ type: "copyResult", success: true, path: msg.path });
-      } catch (err) {
-        deps.logError("Copy path failed", err);
-        const message = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        deps.logError("Copy path failed", error);
+        const message = error instanceof Error ? error.message : String(error);
         await postMessage({
           type: "copyResult",
           success: false,
@@ -224,9 +226,9 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
           await deps.executeCommand("vscode.open", tempUri, { preview: false });
           await postMessage({ type: "openResult", success: true });
         }
-      } catch (err) {
-        deps.logError("Open entry failed", err);
-        const message = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        deps.logError("Open entry failed", error);
+        const message = error instanceof Error ? error.message : String(error);
         await postMessage({
           type: "openResult",
           success: false,
@@ -276,9 +278,9 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
           success: true,
           targetPath,
         });
-      } catch (err) {
-        deps.logError("Extract entry failed", err);
-        const message = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        deps.logError("Extract entry failed", error);
+        const message = error instanceof Error ? error.message : String(error);
         await postMessage({
           type: "extractResult",
           success: false,
@@ -336,9 +338,9 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
           success: true,
           targetPath: extractionTarget,
         });
-      } catch (err) {
-        deps.logError("Extract all failed", err);
-        const message = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        deps.logError("Extract all failed", error);
+        const message = error instanceof Error ? error.message : String(error);
         await postMessage({
           type: "extractResult",
           success: false,

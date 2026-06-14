@@ -24,9 +24,9 @@ type HarnessInitialData = {
 
 function renderHtml(initialData?: HarnessInitialData): string {
   const initialScript =
-    initialData != null
-      ? `<script id="initial-entries" type="application/json">${JSON.stringify(initialData).replace(/</g, "\\u003c")}</script>`
-      : "";
+    initialData == null
+      ? ""
+      : `<script id="initial-entries" type="application/json">${JSON.stringify(initialData).replaceAll("<", "\\u003c")}</script>`;
 
   return templateHtml
     .replaceAll("__CSP_SOURCE__", "vscode-webview:")
@@ -68,7 +68,7 @@ async function createWebviewHarness(initialData?: HarnessInitialData) {
 }
 
 function visibleNames(document: Document): string[] {
-  return Array.from(document.querySelectorAll(".rowName, .rowNameButton")).map(
+  return [...document.querySelectorAll(".rowName, .rowNameButton")].map(
     (element) => element.textContent?.trim() ?? "",
   );
 }
@@ -77,9 +77,9 @@ describe("webview harness", () => {
   it("renders an empty archive without the table", async () => {
     const { document, dom } = await createWebviewHarness({ entries: [] });
 
-    expect(document.getElementById("treeTable")?.getAttribute("style")).toContain("display:none");
-    expect(document.getElementById("statusText")?.textContent).toContain("empty");
-    expect(document.getElementById("summary")?.textContent).toContain("No entries");
+    expect(document.querySelector("#treeTable")?.getAttribute("style")).toContain("display:none");
+    expect(document.querySelector("#statusText")?.textContent).toContain("empty");
+    expect(document.querySelector("#summary")?.textContent).toContain("No entries");
 
     dom.window.close();
   });
@@ -87,9 +87,9 @@ describe("webview harness", () => {
   it("renders an initial error instead of the tree", async () => {
     const { document, dom } = await createWebviewHarness({ error: "Archive is corrupt" });
 
-    expect(document.getElementById("error")?.textContent).toBe("Archive is corrupt");
-    expect(document.getElementById("treeTable")?.getAttribute("style")).toContain("display:none");
-    expect(document.getElementById("retryBtn")?.getAttribute("style")).toContain("inline");
+    expect(document.querySelector("#error")?.textContent).toBe("Archive is corrupt");
+    expect(document.querySelector("#treeTable")?.getAttribute("style")).toContain("display:none");
+    expect(document.querySelector("#retryBtn")?.getAttribute("style")).toContain("inline");
 
     dom.window.close();
   });
@@ -101,7 +101,7 @@ describe("webview harness", () => {
       message: "Timed out after 10s",
     });
 
-    const partial = document.getElementById("partial");
+    const partial = document.querySelector("#partial");
     expect(partial?.textContent).toContain("Timed out after 10s");
     expect(partial?.querySelector("#retryBtnInline")).not.toBeNull();
 
@@ -134,11 +134,11 @@ describe("webview harness", () => {
       entries: [{ path: "notes.txt", name: "notes.txt", isDirectory: false }],
     });
 
-    const searchInput = document.getElementById("searchInput") as HTMLInputElement;
+    const searchInput = document.querySelector("#searchInput") as HTMLInputElement;
     searchInput.value = "missing-file";
     searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
 
-    expect(document.getElementById("empty")?.getAttribute("style")).not.toBe("display: none;");
+    expect(document.querySelector("#empty")?.getAttribute("style")).not.toBe("display: none;");
     expect(visibleNames(document)).toHaveLength(0);
 
     dom.window.close();
@@ -160,9 +160,9 @@ describe("webview harness", () => {
       .querySelector('[data-sort="compressed"]')
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
 
-    const fileNames = Array.from(
-      document.querySelectorAll('.row[data-kind="file"] .rowNameButton'),
-    ).map((element) => element.textContent?.trim());
+    const fileNames = [...document.querySelectorAll('.row[data-kind="file"] .rowNameButton')].map(
+      (element) => element.textContent?.trim(),
+    );
     expect(fileNames[0]).toBe("large.bin");
 
     document
@@ -171,8 +171,8 @@ describe("webview harness", () => {
     document
       .querySelector('[data-sort="kind"]')
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
-    const kinds = Array.from(document.querySelectorAll('tbody tr.row [data-col="kind"]')).map(
-      (element) => element.textContent?.trim(),
+    const kinds = [...document.querySelectorAll('tbody tr.row [data-col="kind"]')].map((element) =>
+      element.textContent?.trim(),
     );
     expect(kinds[0]).toBe("Folder");
 
@@ -185,7 +185,7 @@ describe("webview harness", () => {
     });
 
     document
-      .getElementById("refreshBtn")
+      .querySelector("#refreshBtn")
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
     document
       .querySelector('.rowAction[data-action="open"][data-path="docs/readme.txt"]')
@@ -260,7 +260,7 @@ describe("webview harness", () => {
     });
 
     document
-      .getElementById("extractAllBtn")
+      .querySelector("#extractAllBtn")
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
     document
       .querySelector(
@@ -283,7 +283,7 @@ describe("webview harness", () => {
       }),
     );
 
-    expect(document.getElementById("partial")?.textContent).toContain(
+    expect(document.querySelector("#partial")?.textContent).toContain(
       "Extracted to: /tmp/extracted/large-archive",
     );
 
@@ -308,13 +308,13 @@ describe("webview harness", () => {
     expect(visibleNames(document).length).toBeGreaterThan(3);
 
     document
-      .getElementById("collapseAllBtn")
+      .querySelector("#collapseAllBtn")
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
     expect(visibleNames(document)).toHaveLength(1);
     expect(visibleNames(document)[0]).toMatch(/^large-archive/);
 
     document
-      .getElementById("expandAllBtn")
+      .querySelector("#expandAllBtn")
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
     expect(visibleNames(document)).toContain("nested-long.txt");
     expect(visibleNames(document)).toContain("pixel.png");
@@ -330,20 +330,20 @@ describe("webview harness", () => {
     window.dispatchEvent(
       new window.MessageEvent("message", { data: { type: "loading", show: true } }),
     );
-    expect(document.getElementById("loading")?.getAttribute("style")).toContain("flex");
+    expect(document.querySelector("#loading")?.getAttribute("style")).toContain("flex");
 
     window.dispatchEvent(
       new window.MessageEvent("message", { data: { type: "error", message: "Read failed" } }),
     );
-    expect(document.getElementById("error")?.textContent).toBe("Read failed");
+    expect(document.querySelector("#error")?.textContent).toBe("Read failed");
 
     window.dispatchEvent(
       new window.MessageEvent("message", {
         data: { type: "extractResult", success: false, error: "Permission denied" },
       }),
     );
-    expect(document.getElementById("partial")?.className).toBe("is-error");
-    expect(document.getElementById("partial")?.textContent).toContain("Permission denied");
+    expect(document.querySelector("#partial")?.className).toBe("is-error");
+    expect(document.querySelector("#partial")?.textContent).toContain("Permission denied");
 
     dom.window.close();
   });

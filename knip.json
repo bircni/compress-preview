@@ -1,0 +1,6 @@
+{
+  "entry": ["scripts/**/*.ts", "src/e2e/runTest.ts", "src/e2e/suite/index.ts"],
+  "project": ["src/**/*.ts", "scripts/**/*.ts"],
+  "ignoreDependencies": ["@vscode/codicons"],
+  "ignoreBinaries": ["ovsx", "code", "cursor"]
+}

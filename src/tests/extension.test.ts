@@ -161,7 +161,7 @@ describe("extension", () => {
     expect(registerCommand.mock.calls[0][1]()).toBe("state");
     registerCommand.mock.calls[1][1]({ type: "retryLoad" });
     expect(postMessage).toHaveBeenCalledWith({ type: "retryLoad" });
-    registerCommand.mock.calls[2][1](undefined);
+    registerCommand.mock.calls[2][1]();
     expect(setOverrides).toHaveBeenCalledWith({});
     registerCommand.mock.calls[3][1]();
     expect(clearMessages).toHaveBeenCalled();

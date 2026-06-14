@@ -29,7 +29,7 @@ describe("logger", () => {
 
   it("falls back to console.error when no output channel is set", async () => {
     vi.resetModules();
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const mod = (await import("../logger")) as typeof loggerModule;
 
     mod.logger.info("startup");

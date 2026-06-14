@@ -41,26 +41,18 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.commands.registerCommand("compressPreview.__test.getState", () =>
         getZipEditorTestState(),
       ),
-    );
-    context.subscriptions.push(
       vscode.commands.registerCommand("compressPreview.__test.postMessage", (message: unknown) =>
         dispatchZipEditorTestMessage(message as WebviewHostMessage),
       ),
-    );
-    context.subscriptions.push(
       vscode.commands.registerCommand(
         "compressPreview.__test.setOverrides",
         (overrides: unknown) => {
           setZipEditorTestOverrides(overrides ?? {});
         },
       ),
-    );
-    context.subscriptions.push(
       vscode.commands.registerCommand("compressPreview.__test.clearMessages", () => {
         clearZipEditorTestMessages();
       }),
-    );
-    context.subscriptions.push(
       vscode.commands.registerCommand("compressPreview.__test.reset", () => {
         resetZipEditorTestState();
       }),
