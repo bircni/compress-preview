@@ -45,8 +45,21 @@ export function registerZipContentProvider(context: vscode.ExtensionContext): vo
   );
 }
 
+/**
+ * Build the preview URI for an entry.
+ *
+ * The entry path is carried in the URI path as well as the query: VS Code derives the editor
+ * tab label and the language mode from the URI path, so leaving it empty shows a nameless tab
+ * and falls back to plain text. The query stays authoritative when resolving the content.
+ */
 export function makeZipPreviewUri(zipPath: string, entryPath: string): vscode.Uri {
+  const encodedEntryPath = entryPath
+    .replaceAll("\\", "/")
+    .split("/")
+    .filter((segment) => segment.length > 0 && segment !== ".")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
   return vscode.Uri.parse(
-    `${SCHEME}://preview?zip=${encodeURIComponent(zipPath)}&entry=${encodeURIComponent(entryPath)}`,
+    `${SCHEME}://preview/${encodedEntryPath}?zip=${encodeURIComponent(zipPath)}&entry=${encodeURIComponent(entryPath)}`,
   );
 }

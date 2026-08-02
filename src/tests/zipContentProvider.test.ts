@@ -129,8 +129,46 @@ describe("zipContentProvider", () => {
     );
     expect(context.subscriptions).toHaveLength(1);
     expect(parse).toHaveBeenCalledWith(
-      "compress-preview://preview?zip=%2Ftmp%2Farchive%20name.zip&entry=docs%2Fhello%20world.txt",
+      "compress-preview://preview/docs/hello%20world.txt?zip=%2Ftmp%2Farchive%20name.zip&entry=docs%2Fhello%20world.txt",
     );
     expect(uri).toEqual({ value: expect.any(String) });
+  });
+
+  it("puts the entry name in the URI path so the editor tab is labelled", async () => {
+    const parse = vi.fn((value: string) => ({ value }));
+    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
+    vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+
+    const { makeZipPreviewUri } =
+      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+
+    const pathOf = (entryPath: string): string => {
+      makeZipPreviewUri("/tmp/chart.zip", entryPath);
+      const raw = parse.mock.lastCall?.[0] ?? "";
+      return decodeURIComponent(
+        raw.slice("compress-preview://preview".length).split("?", 1)[0] ?? "",
+      );
+    };
+
+    expect(pathOf("templates/values.yaml")).toBe("/templates/values.yaml");
+    expect(pathOf("notes.txt")).toBe("/notes.txt");
+    // leading "./" and backslash separators must not collapse the name away
+    expect(pathOf("./templates/_helpers.tpl")).toBe("/templates/_helpers.tpl");
+    expect(pathOf(String.raw`templates\values.yaml`)).toBe("/templates/values.yaml");
+  });
+
+  it("escapes characters that would otherwise split the preview URI", async () => {
+    const parse = vi.fn((value: string) => ({ value }));
+    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
+    vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+
+    const { makeZipPreviewUri } =
+      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+
+    makeZipPreviewUri("/tmp/chart.zip", "docs/re#ad?me.yaml");
+    const raw = parse.mock.lastCall?.[0] ?? "";
+
+    expect(raw).toContain("/docs/re%23ad%3Fme.yaml?zip=");
+    expect(raw).toContain("entry=docs%2Fre%23ad%3Fme.yaml");
   });
 });

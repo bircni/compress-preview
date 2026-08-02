@@ -289,7 +289,7 @@ describe("ZipPreviewEditorProvider", () => {
 
     expect(harness.openTextDocument).toHaveBeenCalledWith(
       expect.objectContaining({
-        value: expect.stringContaining("compress-preview://preview?zip="),
+        value: expect.stringContaining("compress-preview://preview/docs/readme.txt?zip="),
       }),
     );
     expect(harness.showTextDocument).toHaveBeenCalledWith(
