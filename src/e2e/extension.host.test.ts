@@ -216,6 +216,31 @@ describe("Compress Preview extension host", () => {
     assert.deepStrictEqual(state?.sentMessages.at(-1), { type: "openResult", success: true });
   });
 
+  it("labels text preview tabs with the entry file name", async () => {
+    const archivePath = path.join(os.tmpdir(), "compress-preview-e2e-label.tar");
+    fs.rmSync(archivePath, { force: true });
+    await createTarFixture(archivePath, [
+      { name: "templates/values.yaml", content: "replicaCount: 1\n" },
+    ]);
+
+    await openCustomEditorFor(vscode.Uri.file(archivePath));
+    await clearEditorMessages();
+
+    await postEditorMessage({ type: "openEntry", path: "templates/values.yaml" });
+
+    await waitFor(() => {
+      const editor = vscode.window.activeTextEditor;
+      assert.ok(editor);
+      assert.strictEqual(editor.document.uri.scheme, "compress-preview");
+      // the reported bug: an empty URI path left the tab labelled "."
+      assert.strictEqual(path.posix.basename(editor.document.uri.path), "values.yaml");
+      assert.strictEqual(vscode.window.tabGroups.activeTabGroup.activeTab?.label, "values.yaml");
+      assert.ok(editor.document.getText().includes("replicaCount: 1"));
+    });
+
+    fs.rmSync(archivePath, { force: true });
+  });
+
   it("opens binary entries and records the preview file path", async () => {
     await openCustomEditorFor(fixtureUri("sample-app.apk"));
     await clearEditorMessages();
