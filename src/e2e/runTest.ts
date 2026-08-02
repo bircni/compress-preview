@@ -6,18 +6,20 @@ async function main(): Promise<void> {
   const extensionDevelopmentPath = repoRoot;
   const extensionTestsPath = path.resolve(__dirname, "suite", "index.js");
 
-  await runTests({
-    extensionDevelopmentPath,
-    extensionTestsPath,
-    launchArgs: [repoRoot, "--disable-extensions"],
-    extensionTestsEnv: {
-      ...process.env,
-      COMPRESS_PREVIEW_ENABLE_TEST_COMMANDS: "1",
-    },
-  });
+  try {
+    await runTests({
+      extensionDevelopmentPath,
+      extensionTestsPath,
+      launchArgs: [repoRoot, "--disable-extensions"],
+      extensionTestsEnv: {
+        ...process.env,
+        COMPRESS_PREVIEW_ENABLE_TEST_COMMANDS: "1",
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
 }
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
-});
+void main();

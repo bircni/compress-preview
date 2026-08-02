@@ -130,7 +130,8 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
   handleMessage: (msg: WebviewHostMessage) => Promise<void>;
 } {
   const textExtensions = new Set(DEFAULT_TEXT_EXTENSIONS);
-  for (const extension of deps.textExtensions ?? []) {
+  const configuredExtensions = deps.textExtensions ?? [];
+  for (const extension of configuredExtensions) {
     const normalized = extension.trim().toLowerCase().replace(/^\./, "");
     if (normalized) {
       textExtensions.add(normalized);
@@ -207,25 +208,21 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
           const uri = deps.createTextPreviewUri(deps.zipPath, entryPath);
           const doc = await deps.openTextDocument(uri);
           await deps.showTextDocument(doc, { preview: false });
-          await postMessage({ type: "openResult", success: true });
         } else {
           await deps.cleanupTempPreviews();
           const tempPath = deps.createTempPreviewPath(deps.zipPath, entryPath);
-          const reuseTempPreview = deps.shouldReuseTempPreview(deps.zipPath, tempPath);
-          const tempUri = reuseTempPreview
-            ? deps.createFileUri(tempPath)
-            : await deps.openEntryReadStream(deps.zipPath, entryPath).then(async ({ stream }) => {
-                const uri = await writeStreamToFile(stream, tempPath, deps.createFileUri);
-                await deps.markTempPreviewUsed(tempPath);
-                return uri;
-              });
-          if (reuseTempPreview) {
-            await deps.markTempPreviewUsed(tempPath);
+          let tempUri: vscode.Uri;
+          if (deps.shouldReuseTempPreview(deps.zipPath, tempPath)) {
+            tempUri = deps.createFileUri(tempPath);
+          } else {
+            const { stream } = await deps.openEntryReadStream(deps.zipPath, entryPath);
+            tempUri = await writeStreamToFile(stream, tempPath, deps.createFileUri);
           }
+          await deps.markTempPreviewUsed(tempPath);
           deps.onBinaryPreviewPath?.(tempUri.fsPath);
           await deps.executeCommand("vscode.open", tempUri, { preview: false });
-          await postMessage({ type: "openResult", success: true });
         }
+        await postMessage({ type: "openResult", success: true });
       } catch (error) {
         deps.logError("Open entry failed", error);
         const message = error instanceof Error ? error.message : String(error);

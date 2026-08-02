@@ -89,8 +89,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
   const markTempPreviewUsed = vi.fn().mockResolvedValue();
 
   let messageHandler:
-    | ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>)
-    | undefined;
+    ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>) | undefined;
 
   let fileWatcherChange: (() => void) | undefined;
   const clipboardWriteText = vi.fn().mockResolvedValue();

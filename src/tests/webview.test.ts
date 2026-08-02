@@ -4,7 +4,7 @@ import { getInitialHtml } from "../webview/content";
 import type * as webviewContentModule from "../webview/content";
 
 function extractInlineScript(html: string): string {
-  const matches = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+  const matches = html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g).toArray();
   const script = matches.at(-1)?.[1];
   if (!script) {
     throw new Error("Expected an inline script in generated HTML");
@@ -71,6 +71,16 @@ describe("getInitialHtml", () => {
 
     expect(html).toContain("\\u003c/script>");
     expect(html).not.toContain("</script><div>boom</div>");
+  });
+
+  it("keeps replacement patterns in entry names verbatim", () => {
+    const trickyName = "$&$`$'.txt";
+    const html = getInitialHtml("vscode-webview:", {
+      entries: [{ path: trickyName, name: trickyName, isDirectory: false }],
+    });
+
+    expect(html).toContain(trickyName);
+    expect(html).not.toContain("__INITIAL_SCRIPT__");
   });
 
   it("throws when the webview template cannot be found", async () => {
