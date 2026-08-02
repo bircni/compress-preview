@@ -31,7 +31,7 @@ Before making changes:
 - Single webview (HTML + inline script in `src/webview/content.html`), HTML template loaded at runtime via `src/webview/content.ts`
 - Vitest for tests
 - esbuild for bundling, vsce for packaging
-- ESLint, Prettier
+- oxlint (type-aware) for linting, oxfmt for formatting
 
 ## Project Structure
 
@@ -102,10 +102,11 @@ npm run test:report    # Tests then report path
 **Quality:**
 
 ```bash
-npm run lint           # ESLint
-npm run format         # Prettier check
-npm run format:write   # Prettier fix
-npm run check-unused   # depcheck
+npm run lint           # oxlint (type-aware)
+npm run lint:fix       # oxlint --fix
+npm run format         # oxfmt check
+npm run format:write   # oxfmt write
+npm run check-unused   # knip
 npm run validate       # check-unused + lint + format + test:coverage + test:e2e + build
 ```
 

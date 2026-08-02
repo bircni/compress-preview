@@ -89,7 +89,9 @@ function ensureFolderNode(
 
 function sortNodeChildren(node: ArchiveTreeNode): void {
   node.children.sort((left, right) => compareEntries(left.entry, right.entry));
-  for (const child of node.children) sortNodeChildren(child);
+  for (const child of node.children) {
+    sortNodeChildren(child);
+  }
 }
 
 export function buildArchiveTree(entries: ArchiveEntry[]): ArchiveTreeNode[] {
@@ -126,6 +128,8 @@ export function buildArchiveTree(entries: ArchiveEntry[]): ArchiveTreeNode[] {
   });
 
   rootNodes.sort((left, right) => compareEntries(left.entry, right.entry));
-  for (const node of rootNodes) sortNodeChildren(node);
+  for (const node of rootNodes) {
+    sortNodeChildren(node);
+  }
   return rootNodes;
 }
