@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1](https://github.com/bircni/compress-preview/compare/v0.6.0..v0.6.1) - 2026-08-02
+
+### Fixed
+
+- show the entry file name on text preview tabs ([#16](https://github.com/bircni/compress-preview/issues/16)) - ([d99c597](https://github.com/bircni/compress-preview/commit/d99c5974d28a09d7624c8e01ce8f38c7af4100b2))
+
+### Internal
+
+- **(deps)** update dependencies and adapt to unicorn 72 - ([5740484](https://github.com/bircni/compress-preview/commit/574048457cf4808acb1cab592dba2121c30a7320))
+- migrate from eslint/prettier to oxlint and oxfmt - ([10256c8](https://github.com/bircni/compress-preview/commit/10256c8291a291ecc56680007ce5da14367a05af))
+
 ## [0.6.0](https://github.com/bircni/compress-preview/compare/v0.5.0..v0.6.0) - 2026-06-14
 
 ### Added
