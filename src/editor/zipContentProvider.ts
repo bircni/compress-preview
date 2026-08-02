@@ -26,14 +26,15 @@ function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
 }
 
 export class ZipContentProvider implements vscode.TextDocumentContentProvider {
-  provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
+  async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
     const params = new URLSearchParams(uri.query);
     const zipPath = params.get("zip") ?? "";
     const entryPath = params.get("entry") ?? uri.path.replace(/^\//, "");
     if (!zipPath || !entryPath) {
-      return Promise.reject(new Error("Invalid compress-preview URI"));
+      throw new Error("Invalid compress-preview URI");
     }
-    return openEntryReadStream(zipPath, entryPath).then(({ stream }) => streamToString(stream));
+    const { stream } = await openEntryReadStream(zipPath, entryPath);
+    return streamToString(stream);
   }
 }
 

@@ -61,8 +61,10 @@ export function getInitialHtml(
 
   const codiconsStyleHref = options?.codiconsStyleHref ?? "";
 
+  // replacement values are passed as functions so `$&`, `$'` and friends inside
+  // entry names are inserted verbatim instead of being treated as substitution patterns
   return getTemplateHtml()
-    .replaceAll("__CSP_SOURCE__", cspSource)
-    .replace("__CODICONS_STYLE__", codiconsStyleHref)
-    .replace("__INITIAL_SCRIPT__", initialScript);
+    .replaceAll("__CSP_SOURCE__", () => cspSource)
+    .replace("__CODICONS_STYLE__", () => codiconsStyleHref)
+    .replace("__INITIAL_SCRIPT__", () => initialScript);
 }

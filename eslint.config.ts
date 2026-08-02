@@ -105,17 +105,19 @@ export default defineConfig([
       "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
 
       // unicorn overrides — disable rules that conflict with project style or build target
-      "unicorn/prevent-abbreviations": "off", // codebase uses err, msg, ext, deps, etc.
+      "unicorn/name-replacements": "off", // codebase uses err, msg, ext, deps, etc. (renamed from prevent-abbreviations)
       "unicorn/prefer-module": "off", // CJS build target (esbuild --format=cjs)
       "unicorn/no-null": "off", // VS Code APIs return/accept null widely
       "unicorn/no-array-reduce": "off", // reduce is used intentionally
-      "unicorn/no-array-for-each": "off", // forEach is idiomatic in this codebase
+      "unicorn/no-for-each": "off", // forEach is idiomatic in this codebase (renamed from no-array-for-each)
       "unicorn/prefer-top-level-await": "off", // module entry points use async functions
       "unicorn/no-process-exit": "off", // scripts use process.exit
       "unicorn/import-style": "off", // conflicts with existing named import style
       "unicorn/prefer-event-target": "off", // Node.js EventEmitter used by streams
       "unicorn/prefer-string-raw": "off", // regex literals are already raw
       "unicorn/switch-case-braces": "off", // conflicts with prettier formatting
+      "unicorn/consistent-boolean-name": "off", // `overwrite`/`synthetic` are public option and node property names
+      "unicorn/no-top-level-assignment-in-function": "off", // lazy-initialized module singletons are intentional
       "unicorn/filename-case": [
         "warn",
         { cases: { camelCase: true, kebabCase: true, pascalCase: true } },
@@ -128,6 +130,8 @@ export default defineConfig([
           allowNumber: true,
           allowBoolean: true,
           allowNullish: true,
+          // exhaustive switch defaults narrow the subject to `never` before reporting it
+          allowNever: true,
         },
       ],
     },
@@ -145,8 +149,8 @@ export default defineConfig([
       "*.js",
       "**/*.js",
       "examples/**",
-      // vitest.config.ts uses its own expectations; keep it out of strict type-aware lint noise
-      "vitest.config.ts",
+      // vitest.config.mts uses its own expectations; keep it out of strict type-aware lint noise
+      "vitest.config.mts",
     ],
   },
   // CLI tooling: allow console.log for user-facing output
@@ -162,6 +166,10 @@ export default defineConfig([
     rules: {
       // false positive: ArchiveTreeNode.children is not a DOM children property
       "unicorn/better-dom-traversing": "off",
+      // assertion helpers such as expect(await fn()).rejects.toThrow(...) nest by nature
+      "unicorn/max-nested-calls": "off",
+      // jsdom does not implement Element#getHTML()
+      "unicorn/prefer-dom-node-html-methods": "off",
       "@typescript-eslint/no-empty-function": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",

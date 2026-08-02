@@ -281,13 +281,13 @@ export function extractEntry(
     case "gz":
       return extractGzipEntry(archivePath, entryPath, outPath);
     default:
-      return Promise.reject(new Error(`Unsupported archive kind: ${String(archiveKind)}`));
+      return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
 }
 
 function prepareExtractAllTarget(outDir: string, overwrite: boolean): string {
   const resolvedOutDir = path.resolve(outDir);
-  if (fs.existsSync(resolvedOutDir) && !overwrite) {
+  if (!overwrite && fs.existsSync(resolvedOutDir)) {
     throw new Error("Target directory already exists; use overwrite or choose another path");
   }
   if (overwrite && fs.existsSync(resolvedOutDir)) {
@@ -514,6 +514,6 @@ export function extractAll(
     case "gz":
       return extractAllGzip(archivePath, outDir, overwrite);
     default:
-      return Promise.reject(new Error(`Unsupported archive kind: ${String(archiveKind)}`));
+      return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
 }

@@ -31,7 +31,7 @@ function renderHtml(initialData?: HarnessInitialData): string {
   return templateHtml
     .replaceAll("__CSP_SOURCE__", "vscode-webview:")
     .replace("__CODICONS_STYLE__", "")
-    .replace("__INITIAL_SCRIPT__", initialScript);
+    .replace("__INITIAL_SCRIPT__", () => initialScript);
 }
 
 async function createWebviewHarness(initialData?: HarnessInitialData) {

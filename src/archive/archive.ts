@@ -141,7 +141,7 @@ function listZipEntries(
           entries.push(
             createArchiveEntry(entry.fileName, {
               isDirectory,
-              ...(isDirectory ? {} : { size: entry.uncompressedSize }),
+              ...(!isDirectory && { size: entry.uncompressedSize }),
               compressedSize: entry.compressedSize,
               mtime: entry.getLastModDate(),
             }),
@@ -506,7 +506,7 @@ export function listEntries(
     case "gz":
       return listGzipEntries(archivePath, sizeBytes);
     default:
-      return Promise.reject(new Error(`Unsupported archive kind: ${String(archiveKind)}`));
+      return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
 }
 
@@ -529,6 +529,6 @@ export function openEntryReadStream(
     case "gz":
       return openGzipEntryReadStream(archivePath, entryPath);
     default:
-      return Promise.reject(new Error(`Unsupported archive kind: ${String(archiveKind)}`));
+      return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
 }

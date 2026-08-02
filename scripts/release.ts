@@ -20,11 +20,11 @@ function run(cmd: string, opts: { stdio?: "pipe" | "inherit" } = {}): string {
 }
 
 function log(msg: string): void {
-  console.log(`\u001B[36m${msg}\u001B[0m`);
+  console.log(`\u{1B}[36m${msg}\u{1B}[0m`);
 }
 
 function error(msg: string): void {
-  console.error(`\u001B[31m${msg}\u001B[0m`);
+  console.error(`\u{1B}[31m${msg}\u{1B}[0m`);
 }
 
 function parseArgs(argv: string[]): { customVersion: string | null | undefined } {
@@ -40,7 +40,6 @@ function parseArgs(argv: string[]): { customVersion: string | null | undefined }
     }
     if (arg.startsWith("--version=")) {
       customVersion = arg.split("=", 2)[1];
-      continue;
     }
   }
 

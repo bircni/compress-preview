@@ -9,7 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts", "eslint.config.ts", "vitest.config.ts"],
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "eslint.config.ts", "vitest.config.mts"],
   "exclude": [
     "examples",
     "examples/**",

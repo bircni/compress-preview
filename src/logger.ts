@@ -34,7 +34,7 @@ export const logger = {
       payload = ` ${err.message}`;
     } else if (err !== null && typeof err === "object") {
       payload = ` ${JSON.stringify(err)}`;
-    } else if (err != null && typeof err !== "object") {
+    } else if (typeof err !== "object" && err != null) {
       const prim = err as string | number | boolean | symbol | bigint;
       payload = ` ${String(prim)}`;
     }

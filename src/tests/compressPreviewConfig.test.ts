@@ -34,7 +34,7 @@ describe("compressPreviewConfig", () => {
   it("uses default days when the setting is not finite", async () => {
     const get = vi.fn((key: string, defaultValue: number) => {
       if (key === "tempPreviewMaxAgeDays") {
-        return Number.NaN;
+        return NaN;
       }
       return defaultValue;
     });
