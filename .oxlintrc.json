@@ -1,0 +1,154 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "node", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error"
+  },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "ignorePatterns": [
+    "out",
+    "dist",
+    ".tmp",
+    ".vscode-test",
+    "node_modules",
+    "coverage",
+    "test-report",
+    "examples",
+    "**/*.d.ts",
+    "**/*.js",
+    "vitest.config.mts"
+  ],
+  "rules": {
+    "curly": ["error", "all"],
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "no-throw-literal": "error",
+    "no-debugger": "error",
+    "no-duplicate-imports": "error",
+    "no-var": "error",
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+    "prefer-const": "error",
+    "prefer-arrow-callback": "error",
+    "prefer-template": "error",
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "object-shorthand": "error",
+    "no-implicit-coercion": "error",
+    "no-useless-concat": "error",
+    "no-useless-return": "error",
+    "no-lonely-if": "error",
+    "yoda": "error",
+
+    "typescript/no-explicit-any": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/prefer-nullish-coalescing": "error",
+    "typescript/prefer-optional-chain": "error",
+    "typescript/prefer-readonly": "error",
+    "typescript/prefer-string-starts-ends-with": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error",
+    "typescript/return-await": ["error", "in-try-catch"],
+    "typescript/restrict-template-expressions": [
+      "error",
+      {
+        "allowNumber": true,
+        "allowBoolean": true,
+        "allowNullish": true,
+        "allowNever": true
+      }
+    ],
+    "typescript/consistent-type-imports": [
+      "error",
+      { "prefer": "type-imports", "fixStyle": "inline-type-imports" }
+    ],
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "typescript/array-type": ["error", { "default": "array" }],
+    "typescript/require-await": "error",
+    "typescript/no-require-imports": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/strict-void-return": "off",
+
+    "unicorn/filename-case": [
+      "error",
+      { "cases": { "camelCase": true, "kebabCase": true, "pascalCase": true } }
+    ],
+    "unicorn/prefer-module": "off",
+    "unicorn/no-null": "off",
+    "unicorn/no-array-reduce": "off",
+    "unicorn/no-array-for-each": "off",
+    "unicorn/prefer-top-level-await": "off",
+    "unicorn/no-process-exit": "off",
+    "unicorn/import-style": "off",
+    "unicorn/prefer-event-target": "off",
+    "unicorn/prefer-string-raw": "off",
+    "unicorn/switch-case-braces": "off",
+    "unicorn/prefer-import-meta-properties": "off",
+    "unicorn/require-post-message-target-origin": "off",
+
+    "no-inline-comments": "off",
+    "no-await-in-loop": "off",
+    "require-await": "off",
+    "require-unicode-regexp": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "max-depth": "off",
+    "max-params": "off",
+    "max-statements": "off",
+    "max-classes-per-file": "off",
+    "import/max-dependencies": "off",
+
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/no-conditional-in-test": "off",
+    "vitest/require-to-throw-message": "off"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**/*.ts"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "src/e2e/**/*.ts"],
+      "rules": {
+        "no-empty-function": "off",
+        "no-unused-vars": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-require-imports": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/use-unknown-in-catch-callback-variable": "off",
+        "typescript/no-unnecessary-condition": "off",
+        "typescript/require-await": "off",
+        "vitest/no-conditional-expect": "off"
+      }
+    }
+  ]
+}

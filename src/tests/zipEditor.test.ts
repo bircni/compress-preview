@@ -89,7 +89,8 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
   const markTempPreviewUsed = vi.fn().mockResolvedValue();
 
   let messageHandler:
-    ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>) | undefined;
+    | ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>)
+    | undefined;
 
   let fileWatcherChange: (() => void) | undefined;
   const clipboardWriteText = vi.fn().mockResolvedValue();
@@ -327,7 +328,9 @@ describe("ZipPreviewEditorProvider", () => {
 
   it("opens binary entries from a temp preview file", async () => {
     const harness = await createProviderHarness({ useFakeTimers: false });
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 120);
+    });
 
     await harness.messageHandler?.({ type: "openEntry", path: "images/logo.png" });
 
@@ -346,7 +349,9 @@ describe("ZipPreviewEditorProvider", () => {
       shouldReuseTempPreview: true,
       useFakeTimers: false,
     });
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 120);
+    });
 
     await harness.messageHandler?.({ type: "openEntry", path: "images/logo.png" });
 

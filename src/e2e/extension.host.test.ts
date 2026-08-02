@@ -67,7 +67,9 @@ async function waitFor<T>(
       return await assertion();
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      await new Promise((resolve) => {
+        setTimeout(resolve, intervalMs);
+      });
     }
   }
 
