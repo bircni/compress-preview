@@ -1067,7 +1067,25 @@
       if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'gif' || ext === 'webp' || ext === 'svg' || ext === 'ico') {
         return 'codicon-file-media';
       }
-      if (ext === 'zip' || ext === 'gz' || ext === 'tar' || ext === 'tgz' || ext === 'jar' || ext === 'vsix') {
+      if (
+        ext === 'zip' ||
+        ext === 'gz' ||
+        ext === 'tar' ||
+        ext === 'tgz' ||
+        ext === 'jar' ||
+        ext === 'vsix' ||
+        ext === '7z' ||
+        ext === 'bz2' ||
+        ext === 'bzip2' ||
+        ext === 'xz' ||
+        ext === 'lzma' ||
+        ext === 'zst' ||
+        ext === 'zstd' ||
+        ext === 'tbz2' ||
+        ext === 'tbz' ||
+        ext === 'txz' ||
+        ext === 'tzst'
+      ) {
         return 'codicon-file-zip';
       }
       if (TEXT_EXTENSIONS[ext] || resolveKind(entry) === 'text') return 'codicon-file-code';

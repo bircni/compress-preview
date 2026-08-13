@@ -17,7 +17,7 @@ Before making changes:
 
 **What This Project Does:**
 
-- VS Code extension that **previews archive files** (ZIP, TAR, GZIP-based, etc.—see `package.json` `customEditors`) in a custom editor instead of the default binary view
+- VS Code extension that **previews archive files** (ZIP, TAR, GZIP, 7z, XZ, BZIP2, Zstandard, etc.—see `package.json` `customEditors`) in a custom editor instead of the default binary view
 - Lists files and folders inside the archive in a webview, with keyboard navigation and virtualized rows for large trees
 - Opens **text-based files** (e.g. `.txt`, `.json`, `.md`) read-only in the editor via a custom `compress-preview://` URI scheme
 - **Extract**: single file, selected entries (one archive scan), or “Extract all” (sibling folder named after the zip, or user-chosen path)
@@ -27,7 +27,7 @@ Before making changes:
 
 - TypeScript (strict), Node.js (see `.node-version`)
 - VS Code Extension API (custom editor, `TextDocumentContentProvider`)
-- [yauzl](https://github.com/thejoshwolfe/yauzl) for ZIP-family archives; tar-stream for TAR/TGZ
+- [yauzl](https://github.com/thejoshwolfe/yauzl) for ZIP-family archives; tar-stream for TAR and compressed TAR; unbzip2-stream / xz-compat / fzstd for bzip2, xz, and zstd; [7z-iterator](https://github.com/kmalakoff/7z-iterator) for 7z
 - Single webview (HTML + inline script in `src/webview/content.html`), HTML template loaded at runtime via `src/webview/content.ts`
 - Vitest for tests
 - esbuild for bundling, vsce for packaging
@@ -44,6 +44,9 @@ Before making changes:
 **Archive (zip reading):**
 
 - `archive/archive.ts` – List entries (time-bound), open read stream for one entry, archive size; uses yauzl with `lazyEntries: true`
+- `archive/format.ts` – Detect archive kind from extension (zip, tar, tgz, tbz, txz, tzst, gz, bz2, xz, zst, 7z)
+- `archive/decompress.ts` – Stream decompressors for gzip, bzip2, xz, and zstd
+- `archive/sevenZip.ts` – List, open, and extract 7z entries via 7z-iterator (password-protected 7z is rejected)
 - `archive/entry.ts` – Types: `ArchiveEntry`, `EntryContentStream`; helper `entryNameFromPath`
 - `archive/extract.ts` – Extract one entry, selected entries (`extractEntries`), or all entries; `extractAllTargetDir` (sibling folder rule)
 
@@ -143,7 +146,7 @@ npm run uninstall:debug # Uninstall extension
 
 ### 2. Custom Editor and Webview
 
-- The custom editor uses view type `compressPreview` and one `selector` with many `filenamePattern` entries (`.zip`, `.tar`, `.gz`, etc.).
+- The custom editor uses view type `compressPreview` and one `selector` with many `filenamePattern` entries (`.zip`, `.tar`, `.gz`, `.7z`, `.xz`, `.bz2`, `.zst`, etc.).
 - Webview HTML is set once after `listEntries` completes (with a short defer). Initial data is embedded in the page via a `<script type="application/json">` block so the first paint doesn’t depend on postMessage.
 - Host ↔ webview communication is via `webview.postMessage` / `webview.onDidReceiveMessage`. **From webview:** `getEntries`, `retryLoad`, `openEntry`, `copyPath`, `extractEntry`, `extractSelected`, `extractAll`. **To webview:** `loading`, `error`, `entries`, `openResult`, `copyResult`, `extractResult`, plus initial embedded JSON when present.
 
@@ -190,6 +193,7 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 ### Changing the archive list or timeout
 
 - `src/archive/archive.ts`: `listEntries`, `DEFAULT_TIMEOUT_MS`, `LOADING_INDICATOR_THRESHOLD`.
+- Format detection: `src/archive/format.ts`. 7z listing: `src/archive/sevenZip.ts`.
 - Retry timeout scaling: `src/archive/listTimeout.ts` (`scaleListTimeoutMs`, `formatPartialListMessage`).
 - User-facing list timeout: `compress-preview.listTimeoutMs` in `package.json`; read in `zipEditor.ts` (with test overrides via `zipEditorTestBridge`).
 

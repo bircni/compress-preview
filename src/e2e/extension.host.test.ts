@@ -53,6 +53,10 @@ function createGzipFixture(targetPath: string, content: string): void {
   fs.writeFileSync(targetPath, zlib.gzipSync(content));
 }
 
+function writeBase64Fixture(targetPath: string, base64: string): void {
+  fs.writeFileSync(targetPath, Buffer.from(base64, "base64"));
+}
+
 async function waitFor<T>(
   assertion: () => T | Promise<T>,
   options: { timeoutMs?: number; intervalMs?: number } = {},
@@ -425,13 +429,17 @@ describe("Compress Preview extension host", () => {
     assert.ok(state.html.includes("File not found."));
   });
 
-  it("opens TAR, TGZ, and GZIP archives in the custom editor", async () => {
+  it("opens TAR, TGZ, GZIP, BZIP2, XZ, Zstandard, and 7z archives in the custom editor", async () => {
     const tarPath = path.join(os.tmpdir(), "compress-preview-e2e-open.tar");
     const tgzPath = path.join(os.tmpdir(), "compress-preview-e2e-open.tgz");
     const gzipPath = path.join(os.tmpdir(), "compress-preview-e2e-open.log.gz");
-    fs.rmSync(tarPath, { force: true });
-    fs.rmSync(tgzPath, { force: true });
-    fs.rmSync(gzipPath, { force: true });
+    const bz2Path = path.join(os.tmpdir(), "compress-preview-e2e-open.txt.bz2");
+    const xzPath = path.join(os.tmpdir(), "compress-preview-e2e-open.txt.xz");
+    const zstPath = path.join(os.tmpdir(), "compress-preview-e2e-open.txt.zst");
+    const sevenZipPath = path.join(os.tmpdir(), "compress-preview-e2e-open.7z");
+    for (const filePath of [tarPath, tgzPath, gzipPath, bz2Path, xzPath, zstPath, sevenZipPath]) {
+      fs.rmSync(filePath, { force: true });
+    }
     await createTarFixture(tarPath, [{ name: "docs/readme.txt", content: "Sample TAR fixture\n" }]);
     await createTarFixture(
       tgzPath,
@@ -439,6 +447,19 @@ describe("Compress Preview extension host", () => {
       { gzip: true },
     );
     createGzipFixture(gzipPath, "Sample gzip fixture\n");
+    writeBase64Fixture(
+      bz2Path,
+      "QlpoOTFBWSZTWUx7nvYAAAMRgEAADkbYACAAMQDTTQQ0DRoRSxGtI3l2eLuSKcKEgmPc97A=",
+    );
+    writeBase64Fixture(
+      xzPath,
+      "/Td6WFoAAATm1rRGBMAUECEBFgAAAAAAAAAAAEEgRR8BAA9oZWxsbyBjb21wcmVzc2VkADekOUHtUbuQAAEwELyTd+IftvN9AQAAAAAEWVo=",
+    );
+    writeBase64Fixture(zstPath, "KLUv/SQQgQAAaGVsbG8gY29tcHJlc3NlZBsmk6s=");
+    writeBase64Fixture(
+      sevenZipPath,
+      "N3q8ryccAARDscoBKAAAAAAAAABqAAAAAAAAALWgacsBIwDc/1Rlc3QgZmlsZSB3aXRoIERlZmxhdGUgY29tcHJlc3Npb24KAQQGAAEJKAAHCwEAAQMEAQgMIwAICgHAQX8iAAAFARkMAAAAAAAAAAAAAAAAESMAZABlAGYAbABhAHQAZQAtAHQAZQBzAHQALgB0AHgAdAAAABkAFAoBAIDHhGU9YtwBFQYBACCApIEAAA==",
+    );
 
     const tarState = await openCustomEditorFor(vscode.Uri.file(tarPath));
     assert.ok(tarState.html.includes("docs/readme.txt"));
@@ -449,8 +470,20 @@ describe("Compress Preview extension host", () => {
     const gzipState = await openCustomEditorFor(vscode.Uri.file(gzipPath));
     assert.ok(gzipState.html.includes("compress-preview-e2e-open.log"));
 
-    fs.rmSync(tarPath, { force: true });
-    fs.rmSync(tgzPath, { force: true });
-    fs.rmSync(gzipPath, { force: true });
+    const bz2State = await openCustomEditorFor(vscode.Uri.file(bz2Path));
+    assert.ok(bz2State.html.includes("compress-preview-e2e-open.txt"));
+
+    const xzState = await openCustomEditorFor(vscode.Uri.file(xzPath));
+    assert.ok(xzState.html.includes("compress-preview-e2e-open.txt"));
+
+    const zstState = await openCustomEditorFor(vscode.Uri.file(zstPath));
+    assert.ok(zstState.html.includes("compress-preview-e2e-open.txt"));
+
+    const sevenZipState = await openCustomEditorFor(vscode.Uri.file(sevenZipPath));
+    assert.ok(sevenZipState.html.includes("deflate-test.txt"));
+
+    for (const filePath of [tarPath, tgzPath, gzipPath, bz2Path, xzPath, zstPath, sevenZipPath]) {
+      fs.rmSync(filePath, { force: true });
+    }
   });
 });

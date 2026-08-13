@@ -4,10 +4,17 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as zlib from "node:zlib";
 import tar from "tar-stream";
 import * as yauzl from "yauzl";
-import { detectArchiveKind, getGzipEntryName, stripSupportedArchiveExtension } from "./format";
+import { createDecompressTransform } from "./decompress";
+import {
+  detectArchiveKind,
+  getGzipEntryName,
+  stripSupportedArchiveExtension,
+  type SingleFileKind,
+  type TarKind,
+} from "./format";
+import { extractAllSevenZip, extractSevenZipEntry } from "./sevenZip";
 
 type ExtractAllConflictMode = "merge" | "replace";
 
@@ -80,30 +87,30 @@ function resolveArchiveDestination(rootDir: string, entryName: string): string {
 
 function createTarInputStream(
   archivePath: string,
-  archiveKind: "tar" | "tgz",
+  archiveKind: TarKind,
 ): {
   source: fs.ReadStream;
   input: NodeJS.ReadableStream;
   destroy: () => void;
 } {
   const source = fs.createReadStream(archivePath);
-  if (archiveKind === "tgz") {
-    const gunzip = zlib.createGunzip();
-    source.pipe(gunzip);
+  if (archiveKind === "tar") {
     return {
       source,
-      input: gunzip,
-      destroy: () => {
-        gunzip.destroy();
-        source.destroy();
-      },
+      input: source,
+      destroy: () => source.destroy(),
     };
   }
 
+  const decompress = createDecompressTransform(archiveKind);
+  source.pipe(decompress);
   return {
     source,
-    input: source,
-    destroy: () => source.destroy(),
+    input: decompress,
+    destroy: () => {
+      decompress.destroy();
+      source.destroy();
+    },
   };
 }
 
@@ -191,7 +198,7 @@ function extractZipEntry(archivePath: string, entryPath: string, outPath: string
 
 function extractTarEntry(
   archivePath: string,
-  archiveKind: "tar" | "tgz",
+  archiveKind: TarKind,
   entryPath: string,
   outPath: string,
 ): Promise<void> {
@@ -263,7 +270,12 @@ function extractTarEntry(
   });
 }
 
-function extractGzipEntry(archivePath: string, entryPath: string, outPath: string): Promise<void> {
+function extractGzipEntry(
+  archivePath: string,
+  entryPath: string,
+  outPath: string,
+  kind: SingleFileKind,
+): Promise<void> {
   const expectedPath = getGzipEntryName(archivePath);
   if (entryPath !== expectedPath) {
     return Promise.reject(new Error(`Entry not found in archive: ${entryPath}`));
@@ -272,12 +284,12 @@ function extractGzipEntry(archivePath: string, entryPath: string, outPath: strin
   return new Promise((resolve, reject) => {
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     const source = fs.createReadStream(archivePath);
-    const gunzip = zlib.createGunzip();
+    const decompress = createDecompressTransform(kind);
     const target = fs.createWriteStream(outPath);
-    source.pipe(gunzip).pipe(target);
+    source.pipe(decompress).pipe(target);
     const cleanup = () => {
       source.destroy();
-      gunzip.destroy();
+      decompress.destroy();
     };
 
     target.on("finish", () => {
@@ -288,9 +300,9 @@ function extractGzipEntry(archivePath: string, entryPath: string, outPath: strin
       cleanup();
       reject(error);
     });
-    gunzip.on("error", (error) => {
+    decompress.on("error", (error) => {
       cleanup();
-      reject(error);
+      reject(error instanceof Error ? error : new Error(String(error)));
     });
     source.on("error", (error) => {
       cleanup();
@@ -313,9 +325,17 @@ export function extractEntry(
       return extractZipEntry(archivePath, entryPath, outPath);
     case "tar":
     case "tgz":
+    case "tbz":
+    case "txz":
+    case "tzst":
       return extractTarEntry(archivePath, archiveKind, entryPath, outPath);
     case "gz":
-      return extractGzipEntry(archivePath, entryPath, outPath);
+    case "bz2":
+    case "xz":
+    case "zst":
+      return extractGzipEntry(archivePath, entryPath, outPath, archiveKind);
+    case "7z":
+      return extractSevenZipEntry(archivePath, entryPath, outPath);
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
@@ -522,7 +542,7 @@ function extractAllZip(
 
 function extractAllTar(
   archivePath: string,
-  archiveKind: "tar" | "tgz",
+  archiveKind: TarKind,
   outDir: string,
   conflictMode: "fail" | ExtractAllConflictMode,
   includeEntry: (entryName: string) => boolean = () => true,
@@ -629,6 +649,7 @@ async function extractAllGzip(
   archivePath: string,
   outDir: string,
   conflictMode: "fail" | ExtractAllConflictMode,
+  kind: SingleFileKind,
   includeEntry: (entryName: string) => boolean = () => true,
 ): Promise<void> {
   const entryName = getGzipEntryName(archivePath);
@@ -643,11 +664,11 @@ async function extractAllGzip(
   }
   try {
     const targetPath = resolveArchiveDestination(session.writeDir, getGzipEntryName(archivePath));
-    await extractGzipEntry(archivePath, getGzipEntryName(archivePath), targetPath);
+    await extractGzipEntry(archivePath, getGzipEntryName(archivePath), targetPath, kind);
     session.commit();
   } catch (error) {
     session.abort();
-    throw error instanceof Error ? error : new Error("Failed to extract gzip archive");
+    throw error instanceof Error ? error : new Error("Failed to extract compressed archive");
   }
 }
 
@@ -700,6 +721,9 @@ function extractFilteredEntries(
       return extractAllZip(archivePath, outDir, conflictMode, includeEntry, requireMatch);
     case "tar":
     case "tgz":
+    case "tbz":
+    case "txz":
+    case "tzst":
       return extractAllTar(
         archivePath,
         archiveKind,
@@ -709,8 +733,41 @@ function extractFilteredEntries(
         requireMatch,
       );
     case "gz":
-      return extractAllGzip(archivePath, outDir, conflictMode, includeEntry);
+    case "bz2":
+    case "xz":
+    case "zst":
+      return extractAllGzip(archivePath, outDir, conflictMode, archiveKind, includeEntry);
+    case "7z":
+      return extractAllSevenZipWithSession(
+        archivePath,
+        outDir,
+        conflictMode,
+        includeEntry,
+        requireMatch,
+      );
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
+  }
+}
+
+async function extractAllSevenZipWithSession(
+  archivePath: string,
+  outDir: string,
+  conflictMode: "fail" | ExtractAllConflictMode,
+  includeEntry: (entryName: string) => boolean,
+  requireMatch: boolean,
+): Promise<void> {
+  let session: ReturnType<typeof beginExtractAll>;
+  try {
+    session = beginExtractAll(outDir, conflictMode);
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Failed to prepare extract target");
+  }
+  try {
+    await extractAllSevenZip(archivePath, session.writeDir, includeEntry, requireMatch);
+    session.commit();
+  } catch (error) {
+    session.abort();
+    throw error instanceof Error ? error : new Error("Failed to extract 7z archive");
   }
 }
