@@ -302,6 +302,25 @@ describe("Compress Preview extension host", () => {
     fs.rmSync(targetDir, { recursive: true, force: true });
   });
 
+  it("extracts selected entries in a single scan", async () => {
+    await openCustomEditorFor(fixtureUri("sample-app.apk"));
+    const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-dialog-selected-"));
+    await setEditorOverrides({ nextOpenDialogPaths: [targetDir] });
+
+    await postEditorMessage({
+      type: "extractSelected",
+      paths: ["docs"],
+    });
+
+    await waitFor(() => {
+      const extractedPath = path.join(targetDir, "docs", "manifest.json");
+      assert.ok(fs.existsSync(extractedPath));
+      assert.ok(!fs.existsSync(path.join(targetDir, "README.txt")));
+    });
+
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  });
+
   it("extracts all entries to the default sibling folder", async () => {
     const archiveUri = fixtureUri("sample-app.apk");
     const defaultDir = path.join(path.dirname(archiveUri.fsPath), "sample-app");

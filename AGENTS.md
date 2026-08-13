@@ -45,7 +45,7 @@ Before making changes:
 
 - `archive/archive.ts` – List entries (time-bound), open read stream for one entry, archive size; uses yauzl with `lazyEntries: true`
 - `archive/entry.ts` – Types: `ArchiveEntry`, `EntryContentStream`; helper `entryNameFromPath`
-- `archive/extract.ts` – Extract one entry or all entries; `extractAllTargetDir` (sibling folder rule)
+- `archive/extract.ts` – Extract one entry, selected entries (`extractEntries`), or all entries; `extractAllTargetDir` (sibling folder rule)
 
 **Editor and content provider:**
 
@@ -145,13 +145,13 @@ npm run uninstall:debug # Uninstall extension
 
 - The custom editor uses view type `compressPreview` and one `selector` with many `filenamePattern` entries (`.zip`, `.tar`, `.gz`, etc.).
 - Webview HTML is set once after `listEntries` completes (with a short defer). Initial data is embedded in the page via a `<script type="application/json">` block so the first paint doesn’t depend on postMessage.
-- Host ↔ webview communication is via `webview.postMessage` / `webview.onDidReceiveMessage`. **From webview:** `getEntries`, `retryLoad`, `openEntry`, `copyPath`, `extractEntry`, `extractAll`. **To webview:** `loading`, `error`, `entries`, `openResult`, `copyResult`, `extractResult`, plus initial embedded JSON when present.
+- Host ↔ webview communication is via `webview.postMessage` / `webview.onDidReceiveMessage`. **From webview:** `getEntries`, `retryLoad`, `openEntry`, `copyPath`, `extractEntry`, `extractSelected`, `extractAll`. **To webview:** `loading`, `error`, `entries`, `openResult`, `copyResult`, `extractResult`, plus initial embedded JSON when present.
 
 ### 3. Archive and Extract
 
 - Use `listEntries(zipPath, { timeoutMs })` for the tree; support partial results (`isPartial`, `message`). Retry increases the timeout (`scaleListTimeoutMs`) and reports how many entries were loaded.
 - Use `openEntryReadStream(zipPath, entryPath)` for reading one entry; caller consumes the stream (e.g. `zipContentProvider` with `streamToString`, or pipe to file for binary).
-- Extract: `extractEntry(zipPath, entryPath, outPath)` for one file/dir; `extractAll(zipPath, outDir, { conflictMode, overwrite })` for full unpack. `conflictMode: "merge"` overwrites conflicting files only; `"replace"` (or `overwrite: true`) swaps in a staged extract so a failure does not wipe the original folder. Target dir for “Extract all” is `extractAllTargetDir(zipPath)` (sibling folder) unless user picks another.
+- Extract: `extractEntry(zipPath, entryPath, outPath)` for one file/dir; `extractEntries(zipPath, entryPaths, outDir)` for a selected subset in one archive scan (folder paths include descendants); `extractAll(zipPath, outDir, { conflictMode, overwrite })` for full unpack. `conflictMode: "merge"` overwrites conflicting files only; `"replace"` (or `overwrite: true`) swaps in a staged extract so a failure does not wipe the original folder. Target dir for “Extract all” is `extractAllTargetDir(zipPath)` (sibling folder) unless user picks another.
 - Paths: normalize entry paths (strip `./`, normalize slashes). When writing to disk, guard against path traversal (e.g. ensure resolved path stays under `outDir`).
 
 ### 4. Testing
@@ -206,7 +206,7 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 
 ### Changing extract behavior or paths
 
-- `src/archive/extract.ts`: `extractEntry`, `extractAll`, `extractAllTargetDir`. Ensure resolved output paths stay under the target dir (path traversal safety). `extractAll` uses `conflictMode: "merge" | "replace"`; replace extracts to a staging directory first.
+- `src/archive/extract.ts`: `extractEntry`, `extractEntries`, `extractAll`, `extractAllTargetDir`. Ensure resolved output paths stay under the target dir (path traversal safety). `extractAll` uses `conflictMode: "merge" | "replace"`; replace extracts to a staging directory first. `extractEntries` filters during a single scan.
 
 ### Changing webview UI or messages
 

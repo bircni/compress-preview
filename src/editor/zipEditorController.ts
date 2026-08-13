@@ -14,6 +14,7 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 export type WebviewHostMessage = {
   type: string;
   path?: string;
+  paths?: string[];
   targetPath?: string;
 };
 
@@ -37,6 +38,12 @@ export type ZipEditorControllerDeps = {
   listEntries: (archivePath: string, options?: ListEntriesOptions) => Promise<ListEntriesResult>;
   openEntryReadStream: (archivePath: string, entryPath: string) => Promise<EntryContentStream>;
   extractEntry: (archivePath: string, entryPath: string, outPath: string) => Promise<void>;
+  extractEntries: (
+    archivePath: string,
+    entryPaths: string[],
+    outDir: string,
+    options?: ExtractAllOptions,
+  ) => Promise<void>;
   extractAll: (archivePath: string, outDir: string, options?: ExtractAllOptions) => Promise<void>;
   extractAllTargetDir: (archivePath: string) => string;
   cleanupTempPreviews: () => Promise<void>;
@@ -340,6 +347,45 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
 
     if (msg.type === "extractEntry" && msg.path) {
       await extractOneEntry(msg.path, msg.targetPath);
+      return;
+    }
+
+    if (msg.type === "extractSelected" && msg.paths && msg.paths.length > 0) {
+      try {
+        let targetPath: string | undefined = msg.targetPath;
+        if (!targetPath) {
+          const chosen = await deps.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: "Extract here",
+            title: "Select destination folder",
+          });
+          targetPath = chosen?.[0]?.fsPath;
+        }
+        if (!targetPath) {
+          await postMessage({
+            type: "extractResult",
+            success: false,
+            error: "Cancelled",
+          });
+          return;
+        }
+        await deps.extractEntries(deps.zipPath, msg.paths, targetPath, { conflictMode: "merge" });
+        await postMessage({
+          type: "extractResult",
+          success: true,
+          targetPath,
+        });
+      } catch (error) {
+        deps.logError("Extract selected failed", error);
+        const message = error instanceof Error ? error.message : String(error);
+        await postMessage({
+          type: "extractResult",
+          success: false,
+          error: message,
+        });
+      }
       return;
     }
 

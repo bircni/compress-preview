@@ -8,7 +8,13 @@ import * as path from "node:path";
 import tar from "tar-stream";
 import * as zlib from "node:zlib";
 import yazl from "yazl";
-import { extractAllTargetDir, extractEntry, extractAll } from "../archive/extract";
+import {
+  extractAllTargetDir,
+  extractEntry,
+  extractAll,
+  extractEntries,
+  entryMatchesSelection,
+} from "../archive/extract";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp/unit-extract");
 const FIXTURES_DIR = path.join(process.cwd(), ".fixtures");
@@ -298,6 +304,94 @@ describe("extract", () => {
     await expect(extractAll(tarPath, outDir, { overwrite: true })).rejects.toThrow(
       "Unsafe archive entry path",
     );
+  });
+
+  it("matches selected files and folder descendants", () => {
+    expect(entryMatchesSelection("docs/readme.txt", ["docs/readme.txt"])).toBe(true);
+    expect(entryMatchesSelection("docs/readme.txt", ["docs"])).toBe(true);
+    expect(entryMatchesSelection("docs/readme.txt", ["docs/"])).toBe(true);
+    expect(entryMatchesSelection("docs/readme.txt", ["other"])).toBe(false);
+    expect(entryMatchesSelection("docs-extra/file.txt", ["docs"])).toBe(false);
+  });
+
+  it("extractEntries writes only the selected zip files", async () => {
+    const zipPath = path.join(TMP_DIR, "extract-selected.zip");
+    await createZip(zipPath, [
+      { name: "keep.txt", content: "keep" },
+      { name: "skip.txt", content: "skip" },
+      { name: "nested/inside.txt", content: "inside" },
+    ]);
+    const outDir = path.join(TMP_DIR, "extract-selected-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractEntries(zipPath, ["keep.txt", "nested/inside.txt"], outDir);
+
+    expect(fs.readFileSync(path.join(outDir, "keep.txt"), "utf8")).toBe("keep");
+    expect(fs.readFileSync(path.join(outDir, "nested", "inside.txt"), "utf8")).toBe("inside");
+    expect(fs.existsSync(path.join(outDir, "skip.txt"))).toBe(false);
+  });
+
+  it("extractEntries includes nested tar entries when a folder is selected", async () => {
+    const tarPath = path.join(TMP_DIR, "extract-selected.tar");
+    await createTar(tarPath, [
+      { name: "nested/file.txt", content: "nested-file" },
+      { name: "nested/other.txt", content: "nested-other" },
+      { name: "sibling.txt", content: "sibling" },
+    ]);
+    const outDir = path.join(TMP_DIR, "extract-selected-tar-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractEntries(tarPath, ["nested"], outDir);
+
+    expect(fs.readFileSync(path.join(outDir, "nested", "file.txt"), "utf8")).toBe("nested-file");
+    expect(fs.readFileSync(path.join(outDir, "nested", "other.txt"), "utf8")).toBe("nested-other");
+    expect(fs.existsSync(path.join(outDir, "sibling.txt"))).toBe(false);
+  });
+
+  it("extractEntries skips unselected unsafe tar paths", async () => {
+    const tarPath = path.join(TMP_DIR, "extract-selected-unsafe.tar");
+    await createTar(tarPath, [
+      { name: "ok.txt", content: "ok" },
+      { name: "../evil.txt", content: "evil" },
+    ]);
+    const outDir = path.join(TMP_DIR, "extract-selected-unsafe-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractEntries(tarPath, ["ok.txt"], outDir);
+
+    expect(fs.readFileSync(path.join(outDir, "ok.txt"), "utf8")).toBe("ok");
+    expect(fs.existsSync(path.join(outDir, "evil.txt"))).toBe(false);
+  });
+
+  it("rejects extractEntries when a gzip entry name does not match", async () => {
+    const gzipPath = path.join(TMP_DIR, "selected.log.gz");
+    createGzip(gzipPath, "gzip-entry");
+    const outDir = path.join(TMP_DIR, "extract-selected-gz-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await expect(extractEntries(gzipPath, ["other.txt"], outDir)).rejects.toThrow(
+      "No matching entries to extract",
+    );
+  });
+
+  it("rejects extractEntries with an empty selection", async () => {
+    const zipPath = path.join(TMP_DIR, "extract-empty-selection.zip");
+    await createZip(zipPath, [{ name: "a.txt", content: "a" }]);
+    const outDir = path.join(TMP_DIR, "extract-empty-selection-out");
+
+    await expect(extractEntries(zipPath, [], outDir)).rejects.toThrow("No entries selected");
+  });
+
+  it("extractAll still succeeds for an empty zip", async () => {
+    const zipPath = path.join(TMP_DIR, "empty.zip");
+    await createZip(zipPath, []);
+    const outDir = path.join(TMP_DIR, "empty-zip-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractAll(zipPath, outDir, { overwrite: true });
+
+    expect(fs.existsSync(outDir)).toBe(true);
+    expect(fs.readdirSync(outDir)).toEqual([]);
   });
 
   it("rejects extractAll for tar hard links", async () => {
