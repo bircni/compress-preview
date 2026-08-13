@@ -519,4 +519,61 @@ describe("webview harness", () => {
 
     dom.window.close();
   });
+
+  it("navigates the tree with keyboard shortcuts", async () => {
+    const { document, window, postedMessages, dom } = await createWebviewHarness({
+      entries: [
+        { path: "docs/", name: "docs", isDirectory: true },
+        { path: "docs/inside.txt", name: "inside.txt", isDirectory: false },
+        { path: "other.txt", name: "other.txt", isDirectory: false },
+      ],
+    });
+    const container = document.querySelector("#treeContainer") as HTMLElement;
+
+    const press = (key: string, init: KeyboardEventInit = {}) => {
+      container.dispatchEvent(
+        new window.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init }),
+      );
+    };
+
+    press("ArrowDown");
+    expect(document.querySelector("tr.row.is-focused")?.getAttribute("data-path")).toBe("docs/");
+
+    press("ArrowLeft");
+    expect(visibleNames(document)).not.toContain("inside.txt");
+
+    press("ArrowRight");
+    expect(visibleNames(document)).toContain("inside.txt");
+
+    press("End");
+    expect(document.querySelector("tr.row.is-focused")?.getAttribute("data-path")).toBe(
+      "other.txt",
+    );
+
+    press("Home");
+    expect(document.querySelector("tr.row.is-focused")?.getAttribute("data-path")).toBe("docs/");
+
+    press("ArrowDown");
+    press("Enter");
+    expect(postedMessages).toContainEqual({ type: "openEntry", path: "docs/inside.txt" });
+
+    press(" ");
+    expect(document.querySelector("tr.row.is-focused")?.classList.contains("is-selected")).toBe(
+      true,
+    );
+
+    press("a", { ctrlKey: true });
+    document
+      .querySelector("#extractSelectedBtn")
+      ?.dispatchEvent(new window.Event("click", { bubbles: true }));
+    const selectedMessage = postedMessages.find(
+      (message) =>
+        typeof message === "object" &&
+        message !== null &&
+        (message as { type?: string }).type === "extractSelected",
+    ) as { type: string; paths: string[] } | undefined;
+    expect(selectedMessage?.paths.toSorted()).toEqual(["docs", "docs/inside.txt", "other.txt"]);
+
+    dom.window.close();
+  });
 });

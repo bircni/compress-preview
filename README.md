@@ -21,7 +21,7 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 ## How To Use
 
 1. Open a supported archive file in VS Code.
-2. Browse the archive contents in the preview.
+2. Browse the archive contents in the preview. Arrow keys move the focused row; Enter opens a file or toggles a folder; Space selects.
 3. Open a file from the tree to preview it in VS Code.
 4. Use **Extract**, **Extract selected**, or **Extract all** when you want files written to disk.
 
