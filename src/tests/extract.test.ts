@@ -140,6 +140,41 @@ describe("extract", () => {
     expect(fs.readFileSync(path.join(outDir, "fresh.txt"), "utf8")).toBe("fresh");
   });
 
+  it("extractAll merge keeps unrelated files and overwrites conflicts", async () => {
+    const zipPath = path.join(TMP_DIR, "extract-merge.zip");
+    await createZip(zipPath, [
+      { name: "conflict.txt", content: "new" },
+      { name: "fresh.txt", content: "fresh" },
+    ]);
+    const outDir = path.join(TMP_DIR, "merge-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, "stale.txt"), "keep-me");
+    fs.writeFileSync(path.join(outDir, "conflict.txt"), "old");
+
+    await extractAll(zipPath, outDir, { conflictMode: "merge" });
+
+    expect(fs.readFileSync(path.join(outDir, "stale.txt"), "utf8")).toBe("keep-me");
+    expect(fs.readFileSync(path.join(outDir, "conflict.txt"), "utf8")).toBe("new");
+    expect(fs.readFileSync(path.join(outDir, "fresh.txt"), "utf8")).toBe("fresh");
+  });
+
+  it("extractAll replace leaves the original folder intact when extraction fails", async () => {
+    const tarPath = path.join(TMP_DIR, "extract-replace-fail.tar");
+    await createTar(tarPath, [{ name: "../evil.txt", content: "evil" }]);
+    const outDir = path.join(TMP_DIR, "replace-fail-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, "stale.txt"), "keep-original");
+
+    await expect(extractAll(tarPath, outDir, { conflictMode: "replace" })).rejects.toThrow(
+      "Unsafe archive entry path",
+    );
+
+    expect(fs.readFileSync(path.join(outDir, "stale.txt"), "utf8")).toBe("keep-original");
+    expect(fs.existsSync(path.join(outDir, "evil.txt"))).toBe(false);
+  });
+
   it("extracts the fixture APK preserving nested files", async () => {
     const fixturePath = path.join(FIXTURES_DIR, "sample-app.apk");
     const outDir = path.join(TMP_DIR, "fixture-apk-out");

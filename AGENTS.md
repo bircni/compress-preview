@@ -151,7 +151,7 @@ npm run uninstall:debug # Uninstall extension
 
 - Use `listEntries(zipPath, { timeoutMs })` for the tree; support partial results (`isPartial`, `message`).
 - Use `openEntryReadStream(zipPath, entryPath)` for reading one entry; caller consumes the stream (e.g. `zipContentProvider` with `streamToString`, or pipe to file for binary).
-- Extract: `extractEntry(zipPath, entryPath, outPath)` for one file/dir; `extractAll(zipPath, outDir, { overwrite })` for full unpack. Target dir for “Extract all” is `extractAllTargetDir(zipPath)` (sibling folder) unless user picks another.
+- Extract: `extractEntry(zipPath, entryPath, outPath)` for one file/dir; `extractAll(zipPath, outDir, { conflictMode, overwrite })` for full unpack. `conflictMode: "merge"` overwrites conflicting files only; `"replace"` (or `overwrite: true`) swaps in a staged extract so a failure does not wipe the original folder. Target dir for “Extract all” is `extractAllTargetDir(zipPath)` (sibling folder) unless user picks another.
 - Paths: normalize entry paths (strip `./`, normalize slashes). When writing to disk, guard against path traversal (e.g. ensure resolved path stays under `outDir`).
 
 ### 4. Testing
@@ -205,7 +205,7 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 
 ### Changing extract behavior or paths
 
-- `src/archive/extract.ts`: `extractEntry`, `extractAll`, `extractAllTargetDir`. Ensure resolved output paths stay under the target dir (path traversal safety).
+- `src/archive/extract.ts`: `extractEntry`, `extractAll`, `extractAllTargetDir`. Ensure resolved output paths stay under the target dir (path traversal safety). `extractAll` uses `conflictMode: "merge" | "replace"`; replace extracts to a staging directory first.
 
 ### Changing webview UI or messages
 

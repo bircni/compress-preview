@@ -11,6 +11,7 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 - Lets you open text-based files directly in VS Code.
 - Opens common binary entries through temporary extracted preview files.
 - Lets you extract one file or the full archive.
+- When Extract all would overwrite an existing folder, you can merge conflicting files, replace the folder after a warning, or choose another location.
 - Handles large archives with loading and partial-result states instead of hanging forever.
 
 ## Screenshots

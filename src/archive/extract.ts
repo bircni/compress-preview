@@ -9,9 +9,24 @@ import tar from "tar-stream";
 import * as yauzl from "yauzl";
 import { detectArchiveKind, getGzipEntryName, stripSupportedArchiveExtension } from "./format";
 
+type ExtractAllConflictMode = "merge" | "replace";
+
 export type ExtractAllOptions = {
   overwrite?: boolean;
+  conflictMode?: ExtractAllConflictMode;
 };
+
+function resolveExtractAllConflictMode(
+  options: ExtractAllOptions,
+): "fail" | ExtractAllConflictMode {
+  if (options.conflictMode === "merge" || options.conflictMode === "replace") {
+    return options.conflictMode;
+  }
+  if (options.overwrite === true) {
+    return "replace";
+  }
+  return "fail";
+}
 
 /**
  * Compute target directory for "extract all": same directory as archive, folder name = archive base name.
@@ -285,35 +300,92 @@ export function extractEntry(
   }
 }
 
-function prepareExtractAllTarget(outDir: string, overwrite: boolean): string {
-  const resolvedOutDir = path.resolve(outDir);
-  if (!overwrite && fs.existsSync(resolvedOutDir)) {
-    throw new Error("Target directory already exists; use overwrite or choose another path");
-  }
-  if (overwrite && fs.existsSync(resolvedOutDir)) {
-    fs.rmSync(resolvedOutDir, { recursive: true });
-  }
-  fs.mkdirSync(resolvedOutDir, { recursive: true });
-  return resolvedOutDir;
+function noop(): void {
+  // Merge writes in place, so there is no staging directory to commit or abort.
 }
 
-function extractAllZip(archivePath: string, outDir: string, overwrite: boolean): Promise<void> {
-  let resolvedOutDir: string;
-  try {
-    resolvedOutDir = prepareExtractAllTarget(outDir, overwrite);
-  } catch (error) {
-    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+function beginExtractAll(
+  outDir: string,
+  conflictMode: "fail" | ExtractAllConflictMode,
+): {
+  writeDir: string;
+  commit: () => void;
+  abort: () => void;
+} {
+  const resolvedOutDir = path.resolve(outDir);
+  const exists = fs.existsSync(resolvedOutDir);
+
+  if (exists && conflictMode === "fail") {
+    throw new Error("Target directory already exists; use overwrite or choose another path");
   }
+
+  const useStaging = conflictMode === "replace" || !exists;
+  if (!useStaging) {
+    fs.mkdirSync(resolvedOutDir, { recursive: true });
+    return {
+      writeDir: resolvedOutDir,
+      commit: noop,
+      abort: noop,
+    };
+  }
+
+  const parentDir = path.dirname(resolvedOutDir);
+  const folderName = path.basename(resolvedOutDir) || "archive";
+  fs.mkdirSync(parentDir, { recursive: true });
+  const stagingDir = fs.mkdtempSync(path.join(parentDir, `.${folderName}.extract-`));
+
+  return {
+    writeDir: stagingDir,
+    commit: () => {
+      if (exists) {
+        const backupDir = path.join(
+          parentDir,
+          `.${folderName}.backup-${process.pid}-${Date.now()}`,
+        );
+        fs.renameSync(resolvedOutDir, backupDir);
+        try {
+          fs.renameSync(stagingDir, resolvedOutDir);
+        } catch (error) {
+          fs.renameSync(backupDir, resolvedOutDir);
+          throw error;
+        }
+        fs.rmSync(backupDir, { recursive: true, force: true });
+        return;
+      }
+      fs.renameSync(stagingDir, resolvedOutDir);
+    },
+    abort: () => {
+      fs.rmSync(stagingDir, { recursive: true, force: true });
+    },
+  };
+}
+
+function extractAllZip(
+  archivePath: string,
+  outDir: string,
+  conflictMode: "fail" | ExtractAllConflictMode,
+): Promise<void> {
+  let session: ReturnType<typeof beginExtractAll>;
+  try {
+    session = beginExtractAll(outDir, conflictMode);
+  } catch (error) {
+    return Promise.reject(
+      error instanceof Error ? error : new Error("Failed to prepare extract target"),
+    );
+  }
+  const resolvedOutDir = session.writeDir;
   return new Promise((resolve, reject) => {
     yauzl.open(
       archivePath,
       { lazyEntries: true },
       (err: Error | null, zipfile: yauzl.ZipFile | undefined) => {
         if (err) {
+          session.abort();
           reject(err);
           return;
         }
         if (!zipfile) {
+          session.abort();
           reject(new Error("Failed to open zip"));
           return;
         }
@@ -329,7 +401,15 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
           if (entriesDone && pending === 0) {
             done = true;
             zipfile.close();
-            resolve();
+            try {
+              session.commit();
+              resolve();
+            } catch (error) {
+              session.abort();
+              reject(
+                error instanceof Error ? error : new Error("Failed to finalize extract target"),
+              );
+            }
           }
         };
 
@@ -340,6 +420,7 @@ function extractAllZip(archivePath: string, outDir: string, overwrite: boolean):
           if (error) {
             done = true;
             zipfile.close();
+            session.abort();
             reject(error);
             return;
           }
@@ -409,14 +490,17 @@ function extractAllTar(
   archivePath: string,
   archiveKind: "tar" | "tgz",
   outDir: string,
-  overwrite: boolean,
+  conflictMode: "fail" | ExtractAllConflictMode,
 ): Promise<void> {
-  let resolvedOutDir: string;
+  let session: ReturnType<typeof beginExtractAll>;
   try {
-    resolvedOutDir = prepareExtractAllTarget(outDir, overwrite);
+    session = beginExtractAll(outDir, conflictMode);
   } catch (error) {
-    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    return Promise.reject(
+      error instanceof Error ? error : new Error("Failed to prepare extract target"),
+    );
   }
+  const resolvedOutDir = session.writeDir;
   return new Promise((resolve, reject) => {
     const { source, input, destroy } = createTarInputStream(archivePath, archiveKind);
     const extract = tar.extract();
@@ -427,9 +511,10 @@ function extractAllTar(
         return;
       }
       settled = true;
+      session.abort();
       destroy();
       extract.destroy();
-      reject(error instanceof Error ? error : new Error(String(error)));
+      reject(error instanceof Error ? error : new Error("Failed to extract archive"));
     };
 
     extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
@@ -474,7 +559,13 @@ function extractAllTar(
       settled = true;
       destroy();
       extract.destroy();
-      resolve();
+      try {
+        session.commit();
+        resolve();
+      } catch (error) {
+        session.abort();
+        reject(error instanceof Error ? error : new Error("Failed to finalize extract target"));
+      }
     });
 
     source.on("error", finishWithError);
@@ -484,15 +575,25 @@ function extractAllTar(
   });
 }
 
-function extractAllGzip(archivePath: string, outDir: string, overwrite: boolean): Promise<void> {
-  let resolvedOutDir: string;
+async function extractAllGzip(
+  archivePath: string,
+  outDir: string,
+  conflictMode: "fail" | ExtractAllConflictMode,
+): Promise<void> {
+  let session: ReturnType<typeof beginExtractAll>;
   try {
-    resolvedOutDir = prepareExtractAllTarget(outDir, overwrite);
+    session = beginExtractAll(outDir, conflictMode);
   } catch (error) {
-    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    throw error instanceof Error ? error : new Error("Failed to prepare extract target");
   }
-  const targetPath = resolveArchiveDestination(resolvedOutDir, getGzipEntryName(archivePath));
-  return extractGzipEntry(archivePath, getGzipEntryName(archivePath), targetPath);
+  try {
+    const targetPath = resolveArchiveDestination(session.writeDir, getGzipEntryName(archivePath));
+    await extractGzipEntry(archivePath, getGzipEntryName(archivePath), targetPath);
+    session.commit();
+  } catch (error) {
+    session.abort();
+    throw error instanceof Error ? error : new Error("Failed to extract gzip archive");
+  }
 }
 
 /**
@@ -503,16 +604,16 @@ export function extractAll(
   outDir: string,
   options: ExtractAllOptions = {},
 ): Promise<void> {
-  const overwrite = options.overwrite ?? false;
+  const conflictMode = resolveExtractAllConflictMode(options);
   const archiveKind = detectArchiveKind(archivePath);
   switch (archiveKind) {
     case "zip":
-      return extractAllZip(archivePath, outDir, overwrite);
+      return extractAllZip(archivePath, outDir, conflictMode);
     case "tar":
     case "tgz":
-      return extractAllTar(archivePath, archiveKind, outDir, overwrite);
+      return extractAllTar(archivePath, archiveKind, outDir, conflictMode);
     case "gz":
-      return extractAllGzip(archivePath, outDir, overwrite);
+      return extractAllGzip(archivePath, outDir, conflictMode);
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
