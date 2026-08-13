@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import type * as vscode from "vscode";
 import type { EntryContentStream } from "../archive/entry";
 import type { ListEntriesOptions, ListEntriesResult } from "../archive/archive";
+import { scaleListTimeoutMs } from "../archive/listTimeout";
 import type { ExtractAllOptions } from "../archive/extract";
 import type { InitialEntriesPayload } from "../webview/content";
 import { DEFAULT_MAX_TEXT_PREVIEW_BYTES, isTextPreviewTooLargeError } from "./textPreview";
@@ -126,13 +127,19 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
   const textExtensions = createTextExtensionSet(deps.textExtensions ?? []);
 
   const listedSizes = new Map<string, number>();
+  let listRetryAttempt = 0;
 
   const postMessage = async (message: unknown): Promise<void> => {
     await deps.postMessage(message);
   };
 
-  const loadAndSetHtml = async (): Promise<void> => {
+  const loadAndSetHtml = async (options?: { retry?: boolean }): Promise<void> => {
     try {
+      if (options?.retry === true) {
+        listRetryAttempt += 1;
+      } else {
+        listRetryAttempt = 0;
+      }
       if (!deps.existsSync(deps.zipPath)) {
         listedSizes.clear();
         deps.setHtml(
@@ -142,11 +149,9 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
         );
         return;
       }
+      const baseTimeoutMs = resolveConfiguredNumber(deps.listTimeoutMs, DEFAULT_TIMEOUT_MS);
       const result = await deps.listEntries(deps.zipPath, {
-        timeoutMs:
-          typeof deps.listTimeoutMs === "function"
-            ? deps.listTimeoutMs()
-            : (deps.listTimeoutMs ?? DEFAULT_TIMEOUT_MS),
+        timeoutMs: scaleListTimeoutMs(baseTimeoutMs, listRetryAttempt),
       });
       listedSizes.clear();
       for (const entry of result.entries) {
@@ -257,8 +262,12 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
 
   const handleMessage = async (msg: WebviewHostMessage): Promise<void> => {
     deps.logInfo("webview message received", { type: msg.type });
-    if (msg.type === "getEntries" || msg.type === "retryLoad") {
+    if (msg.type === "getEntries") {
       await loadAndSetHtml();
+      return;
+    }
+    if (msg.type === "retryLoad") {
+      await loadAndSetHtml({ retry: true });
       return;
     }
 

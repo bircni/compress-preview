@@ -10,11 +10,12 @@ import tar from "tar-stream";
 import yazl from "yazl";
 import * as zlib from "node:zlib";
 import {
-  listEntries,
   getArchiveSizeBytes,
-  openEntryReadStream,
+  listEntries,
   LOADING_INDICATOR_THRESHOLD,
+  openEntryReadStream,
 } from "../archive/archive";
+import { formatPartialListMessage, scaleListTimeoutMs } from "../archive/listTimeout";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp/unit-archive");
 const FIXTURES_DIR = path.join(process.cwd(), ".fixtures");
@@ -146,8 +147,22 @@ describe("archive", () => {
     expect(result.entries.length).toBeGreaterThanOrEqual(0);
     // With 1ms timeout we may get full list on fast runs or partial; message set when partial
     if (result.isPartial) {
-      expect(result.message).toContain("Partial");
+      expect(result.message).toMatch(/entries loaded in 1s/);
     }
+  });
+
+  it("scales list timeout per retry and formats partial progress", () => {
+    expect(scaleListTimeoutMs(10_000, 0)).toBe(10_000);
+    expect(scaleListTimeoutMs(10_000, 1)).toBe(20_000);
+    expect(scaleListTimeoutMs(10_000, 2)).toBe(30_000);
+    expect(scaleListTimeoutMs(200_000, 2)).toBe(300_000);
+    expect(scaleListTimeoutMs(1, 1)).toBe(1000);
+    expect(formatPartialListMessage(12430, 10_000)).toBe(
+      "12,430 entries loaded in 10s. Retry to load more with a longer timeout.",
+    );
+    expect(formatPartialListMessage(1, 1500)).toBe(
+      "1 entry loaded in 2s. Retry to load more with a longer timeout.",
+    );
   });
 
   it("getArchiveSizeBytes returns file size", async () => {

@@ -293,6 +293,27 @@ describe("ZipPreviewEditorProvider", () => {
     expect(harness.listEntries).toHaveBeenCalledTimes(3);
   });
 
+  it("increases the listing timeout on each retry and resets it on refresh", async () => {
+    const harness = await createProviderHarness({ listTimeoutMs: 10_000 });
+    await Promise.resolve();
+
+    expect(harness.listEntries).toHaveBeenLastCalledWith(harness.archivePath, {
+      timeoutMs: 10_000,
+    });
+    await harness.messageHandler?.({ type: "retryLoad" });
+    expect(harness.listEntries).toHaveBeenLastCalledWith(harness.archivePath, {
+      timeoutMs: 20_000,
+    });
+    await harness.messageHandler?.({ type: "retryLoad" });
+    expect(harness.listEntries).toHaveBeenLastCalledWith(harness.archivePath, {
+      timeoutMs: 30_000,
+    });
+    await harness.messageHandler?.({ type: "getEntries" });
+    expect(harness.listEntries).toHaveBeenLastCalledWith(harness.archivePath, {
+      timeoutMs: 10_000,
+    });
+  });
+
   it("opens text entries through the virtual document provider", async () => {
     const harness = await createProviderHarness();
     await Promise.resolve();
@@ -772,7 +793,7 @@ describe("ZipPreviewEditorProvider", () => {
     harness.zipEditorTestBridge.setZipEditorTestOverrides({ listTimeoutMs: 1 });
     await harness.messageHandler?.({ type: "retryLoad" });
 
-    expect(harness.listEntries).toHaveBeenLastCalledWith(harness.archivePath, { timeoutMs: 1 });
+    expect(harness.listEntries).toHaveBeenLastCalledWith(harness.archivePath, { timeoutMs: 1000 });
     harness.zipEditorTestBridge.clearZipEditorTestMessages();
     expect(harness.zipEditorTestBridge.getZipEditorTestState()?.sentMessages).toEqual([]);
     harness.zipEditorTestBridge.resetZipEditorTestState();
