@@ -60,7 +60,7 @@ describe("archive mocked branches", () => {
     const result = await listEntries(archivePath, { timeoutMs: 1 });
 
     expect(result.isPartial).toBe(true);
-    expect(result.message).toContain("Partial");
+    expect(result.message).toContain("loaded in 1s");
     expect(zipfile.close).toHaveBeenCalled();
     expect(zipfile.readEntry).toHaveBeenCalled();
   });

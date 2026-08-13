@@ -56,7 +56,7 @@ Open **Settings** and search for **Compress Preview**, or edit `settings.json`:
 - The preview is read-only.
 - Binary previews are extracted to a temporary OS-specific cache path under `compress-preview/` before opening.
 - Cached binary previews reuse the same archive-entry path and are pruned after the configured number of days without use.
-- Very large archives may show a partial list first, with a retry option.
+- Very large archives may show a partial list first. Retry uses a longer timeout and reports how many entries were already loaded.
 - Text previews stop at `compress-preview.maxTextPreviewBytes` (2 MB by default) so a huge log cannot exhaust memory. You can extract the file or open it once anyway.
 - Folder entries are shown in the archive view but cannot be opened as files.
 

@@ -149,7 +149,7 @@ npm run uninstall:debug # Uninstall extension
 
 ### 3. Archive and Extract
 
-- Use `listEntries(zipPath, { timeoutMs })` for the tree; support partial results (`isPartial`, `message`).
+- Use `listEntries(zipPath, { timeoutMs })` for the tree; support partial results (`isPartial`, `message`). Retry increases the timeout (`scaleListTimeoutMs`) and reports how many entries were loaded.
 - Use `openEntryReadStream(zipPath, entryPath)` for reading one entry; caller consumes the stream (e.g. `zipContentProvider` with `streamToString`, or pipe to file for binary).
 - Extract: `extractEntry(zipPath, entryPath, outPath)` for one file/dir; `extractAll(zipPath, outDir, { conflictMode, overwrite })` for full unpack. `conflictMode: "merge"` overwrites conflicting files only; `"replace"` (or `overwrite: true`) swaps in a staged extract so a failure does not wipe the original folder. Target dir for “Extract all” is `extractAllTargetDir(zipPath)` (sibling folder) unless user picks another.
 - Paths: normalize entry paths (strip `./`, normalize slashes). When writing to disk, guard against path traversal (e.g. ensure resolved path stays under `outDir`).
@@ -190,6 +190,7 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 ### Changing the archive list or timeout
 
 - `src/archive/archive.ts`: `listEntries`, `DEFAULT_TIMEOUT_MS`, `LOADING_INDICATOR_THRESHOLD`.
+- Retry timeout scaling: `src/archive/listTimeout.ts` (`scaleListTimeoutMs`, `formatPartialListMessage`).
 - User-facing list timeout: `compress-preview.listTimeoutMs` in `package.json`; read in `zipEditor.ts` (with test overrides via `zipEditorTestBridge`).
 
 ### Changing the text preview size limit

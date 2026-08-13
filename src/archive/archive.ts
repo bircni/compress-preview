@@ -10,6 +10,7 @@ import tar from "tar-stream";
 import * as yauzl from "yauzl";
 import type { ArchiveEntry, EntryContentStream } from "./entry";
 import { detectArchiveKind, getGzipEntryName } from "./format";
+import { formatPartialListMessage } from "./listTimeout";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const LOADING_INDICATOR_THRESHOLD_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -123,7 +124,7 @@ function listZipEntries(
             entries,
             isPartial: true,
             sizeBytes,
-            message: "Partial list (load interrupted)",
+            message: formatPartialListMessage(entries.length, timeoutMs),
           });
         }, timeoutMs);
 
@@ -204,7 +205,7 @@ function listTarEntries(
         entries,
         isPartial: true,
         sizeBytes,
-        message: "Partial list (load interrupted)",
+        message: formatPartialListMessage(entries.length, timeoutMs),
       });
     }, timeoutMs);
 
