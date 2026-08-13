@@ -185,7 +185,7 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 
 ### Adding a new text extension (open in editor)
 
-- Extend `TEXT_EXTENSIONS` in `src/editor/zipEditor.ts`. Entries whose extension is in this set (or missing) open via `makeZipPreviewUri`; others get a save dialog.
+- Extend the default set in `src/editor/entryKind.ts`, or add user-configured `compress-preview.textExtensions`. The host classifies each entry as `kind: "text" | "binary" | "folder"` before sending it to the webview.
 
 ### Changing the archive list or timeout
 

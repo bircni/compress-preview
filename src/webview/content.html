@@ -733,13 +733,26 @@
       return target.slice(idx + 1).toLowerCase();
     }
 
-    function isTextEntry(entry) {
+    function fallbackKind(entry) {
+      if (entry && entry.isDirectory) return 'folder';
+      return isLegacyTextEntry(entry) ? 'text' : 'binary';
+    }
+
+    function isLegacyTextEntry(entry) {
       return !entry.isDirectory && (TEXT_EXTENSIONS[getExtension(entry)] || getExtension(entry) === '');
     }
 
+    function resolveKind(entry) {
+      if (entry && (entry.kind === 'text' || entry.kind === 'binary' || entry.kind === 'folder')) {
+        return entry.kind;
+      }
+      return fallbackKind(entry);
+    }
+
     function kindText(node) {
-      if (node.entry.isDirectory) return 'Folder';
-      if (isTextEntry(node.entry)) return 'Text';
+      var kind = resolveKind(node.entry);
+      if (kind === 'folder') return 'Folder';
+      if (kind === 'text') return 'Text';
       return 'Binary';
     }
 
@@ -802,7 +815,8 @@
       return {
         path: normalized + '/',
         name: folderName,
-        isDirectory: true
+        isDirectory: true,
+        kind: 'folder'
       };
     }
 
@@ -850,6 +864,7 @@
           path: rawEntry.path,
           name: rawEntry.name,
           isDirectory: rawEntry.isDirectory,
+          kind: resolveKind(rawEntry),
           size: rawEntry.size,
           compressedSize: rawEntry.compressedSize,
           mtime: rawEntry.mtime
@@ -938,10 +953,11 @@
     }
 
     function matchesFilter(entry) {
+      var kind = resolveKind(entry);
       if (activeFilter === 'files') return !entry.isDirectory;
       if (activeFilter === 'folders') return entry.isDirectory;
-      if (activeFilter === 'text') return isTextEntry(entry);
-      if (activeFilter === 'binary') return !entry.isDirectory && !isTextEntry(entry);
+      if (activeFilter === 'text') return kind === 'text';
+      if (activeFilter === 'binary') return kind === 'binary';
       return true;
     }
 
@@ -996,7 +1012,7 @@
       if (ext === 'zip' || ext === 'gz' || ext === 'tar' || ext === 'tgz' || ext === 'jar' || ext === 'vsix') {
         return 'codicon-file-zip';
       }
-      if (TEXT_EXTENSIONS[ext]) return 'codicon-file-code';
+      if (TEXT_EXTENSIONS[ext] || resolveKind(entry) === 'text') return 'codicon-file-code';
       return 'codicon-file';
     }
 

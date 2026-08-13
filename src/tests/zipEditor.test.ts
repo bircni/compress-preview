@@ -338,6 +338,35 @@ describe("ZipPreviewEditorProvider", () => {
     expect(harness.executeCommand).not.toHaveBeenCalled();
   });
 
+  it("embeds host-classified kinds so configured text extensions are not shown as binary", async () => {
+    const harness = await createProviderHarness({
+      textExtensions: ["toml"],
+      listEntriesResult: {
+        entries: [
+          { path: "config/settings.toml", name: "settings.toml", isDirectory: false },
+          { path: "image.png", name: "image.png", isDirectory: false },
+          { path: "docs/", name: "docs", isDirectory: true },
+        ],
+        isPartial: false,
+        sizeBytes: 0,
+      },
+    });
+    await Promise.resolve();
+
+    const initialJson = harness.panel.webview.html.match(/id="initial-entries"[^>]*>([^<]+)/)?.[1];
+    expect(initialJson).toBeDefined();
+    const payload = JSON.parse(initialJson ?? "") as {
+      entries: { path: string; kind: string }[];
+    };
+    expect(payload.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "config/settings.toml", kind: "text" }),
+        expect.objectContaining({ path: "image.png", kind: "binary" }),
+        expect.objectContaining({ path: "docs/", kind: "folder" }),
+      ]),
+    );
+  });
+
   it("prompts before opening a listed text entry that exceeds the preview limit", async () => {
     const harness = await createProviderHarness({
       maxTextPreviewBytes: 1024,

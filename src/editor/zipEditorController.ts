@@ -6,41 +6,9 @@ import type { ListEntriesOptions, ListEntriesResult } from "../archive/archive";
 import type { ExtractAllOptions } from "../archive/extract";
 import type { InitialEntriesPayload } from "../webview/content";
 import { DEFAULT_MAX_TEXT_PREVIEW_BYTES, isTextPreviewTooLargeError } from "./textPreview";
+import { classifyEntryKind, createTextExtensionSet, isTextEntryName } from "./entryKind";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-
-const DEFAULT_TEXT_EXTENSIONS = new Set([
-  "txt",
-  "json",
-  "md",
-  "xml",
-  "html",
-  "htm",
-  "css",
-  "js",
-  "ts",
-  "jsx",
-  "tsx",
-  "log",
-  "yml",
-  "yaml",
-  "csv",
-  "json5",
-  "sh",
-  "bat",
-  "cmd",
-  "ps1",
-  "r",
-  "py",
-  "sql",
-  "env",
-  "ini",
-  "cfg",
-  "conf",
-  "text",
-  "rst",
-  "adoc",
-]);
 
 export type WebviewHostMessage = {
   type: string;
@@ -115,11 +83,6 @@ async function writeStreamToFile(
   return createFileUri(targetPath);
 }
 
-function isTextEntryName(name: string, textExtensions: Set<string>): boolean {
-  const ext = path.extname(name).toLowerCase().replace(/^\./, "");
-  return textExtensions.has(ext) || !ext;
-}
-
 const LARGE_PREVIEW_EXTRACT = "Extract instead";
 const LARGE_PREVIEW_OPEN = "Open anyway";
 const LARGE_PREVIEW_CANCEL = "Cancel";
@@ -160,14 +123,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
   loadAndSetHtml: () => Promise<void>;
   handleMessage: (msg: WebviewHostMessage) => Promise<void>;
 } {
-  const textExtensions = new Set(DEFAULT_TEXT_EXTENSIONS);
-  const configuredExtensions = deps.textExtensions ?? [];
-  for (const extension of configuredExtensions) {
-    const normalized = extension.trim().toLowerCase().replace(/^\./, "");
-    if (normalized) {
-      textExtensions.add(normalized);
-    }
-  }
+  const textExtensions = createTextExtensionSet(deps.textExtensions ?? []);
 
   const listedSizes = new Map<string, number>();
 
@@ -200,6 +156,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
       }
       const entriesForWebview = result.entries.map(({ mtime, ...rest }) => ({
         ...rest,
+        kind: classifyEntryKind(rest, textExtensions),
         ...(mtime !== undefined && {
           mtime: mtime instanceof Date ? mtime.toISOString() : mtime,
         }),
