@@ -175,6 +175,14 @@
       overflow: auto;
       width: 100%;
     }
+    .treeTable tbody tr.virtSpacer td {
+      padding: 0;
+      line-height: 0;
+      border: 0;
+      box-shadow: none;
+      overflow: hidden;
+      vertical-align: top;
+    }
     .treeTable {
       width: 100%;
       border-collapse: collapse;
@@ -520,7 +528,7 @@
       </div>
       <p id="statusText" class="statusLine">Preparing archive</p>
     </header>
-    <div class="treeContainer">
+    <div class="treeContainer" id="treeContainer">
       <div id="loading" class="state">Loading archive contents...</div>
       <div id="error" class="state"></div>
       <div id="empty" class="state">No matching archive entries for the current filter.</div>
@@ -603,6 +611,7 @@
     var searchInput = document.getElementById('searchInput');
     var refreshBtn = document.getElementById('refreshBtn');
     var treeTableEl = document.getElementById('treeTable');
+    var treeContainerEl = document.getElementById('treeContainer');
     var sortHeaderButtons = Array.prototype.slice.call(document.querySelectorAll('[data-sort]'));
     var filterButtons = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
 
@@ -612,6 +621,10 @@
     var selectedPaths = {};
     var lastAnchorIndex = -1;
     var visibleRows = [];
+    var ROW_HEIGHT = 22;
+    var ROW_OVERSCAN = 12;
+    var virtRangeStart = 0;
+    var virtRangeEnd = 0;
     var activeFilter = 'all';
     var searchQuery = '';
     var activeSort = 'pathAsc';
@@ -1171,6 +1184,23 @@
         + '</tr>';
     }
 
+    function virtSpacerRow(heightPx, key) {
+      if (heightPx <= 0) return '';
+      return '<tr class="virtSpacer" aria-hidden="true" data-spacer="' + key + '"><td colspan="6" style="height:' + heightPx + 'px"></td></tr>';
+    }
+
+    function getVirtualRange(rowCount) {
+      var viewport = treeContainerEl ? treeContainerEl.clientHeight : 0;
+      if (!viewport || rowCount === 0) {
+        return { start: 0, end: rowCount };
+      }
+      var scrollTop = treeContainerEl.scrollTop || 0;
+      var start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - ROW_OVERSCAN);
+      var end = Math.min(rowCount, Math.ceil((scrollTop + viewport) / ROW_HEIGHT) + ROW_OVERSCAN);
+      if (end < start) end = start;
+      return { start: start, end: end };
+    }
+
     function renderVisibleTree() {
       var visibleTree = getVisibleTree();
       var treeState = getTreeState();
@@ -1186,9 +1216,14 @@
       visibleTree.forEach(function(nodeState) {
         collectVisibleRows(nodeState, 0, treeState, visibleRows, counters);
       });
-      var html = visibleRows.map(function(row, index) {
-        return renderNodeRow(row, index);
-      }).join('');
+      var range = getVirtualRange(visibleRows.length);
+      virtRangeStart = range.start;
+      virtRangeEnd = range.end;
+      var html = virtSpacerRow(range.start * ROW_HEIGHT, 'top');
+      for (var i = range.start; i < range.end; i += 1) {
+        html += renderNodeRow(visibleRows[i], i);
+      }
+      html += virtSpacerRow((visibleRows.length - range.end) * ROW_HEIGHT, 'bottom');
       return {
         html: html,
         counters: counters
@@ -1365,20 +1400,25 @@
       applySort(asc);
     }
 
+    function paintTreeRows() {
+      var rendered = renderVisibleTree();
+      if (treeEl) treeEl.innerHTML = rendered.html;
+      bindRowActions();
+      updateSelectAllCheck();
+      layoutTableColumns();
+      return rendered;
+    }
+
     function renderEntries() {
       clearMessages();
-      var rendered = renderVisibleTree();
+      var rendered = paintTreeRows();
       if (loadingEl) loadingEl.style.display = 'none';
       if (emptyEl) emptyEl.style.display = rendered.counters.total ? 'none' : 'block';
       if (treeTableEl) treeTableEl.style.display = rendered.counters.total ? 'block' : 'none';
-      if (treeEl) treeEl.innerHTML = rendered.html;
-      bindRowActions();
       updateSummary(rendered.counters);
       updateFolderButtons();
       updateSortHeaders();
-      updateSelectAllCheck();
       updateExtractSelectedButton();
-      layoutTableColumns();
       if (extractAllBtn) extractAllBtn.style.display = allEntries.length ? 'inline-flex' : 'none';
       setStatus(allEntries.length ? 'Archive ready' : 'Archive is empty');
     }
@@ -1475,6 +1515,13 @@
     installColumnResizers();
     updateSortHeaders();
     layoutTableColumns();
+    if (treeContainerEl) {
+      treeContainerEl.addEventListener('scroll', function() {
+        var range = getVirtualRange(visibleRows.length);
+        if (range.start === virtRangeStart && range.end === virtRangeEnd) return;
+        paintTreeRows();
+      });
+    }
 
     if (refreshBtn) {
       refreshBtn.addEventListener('click', function() {

@@ -492,4 +492,31 @@ describe("webview harness", () => {
 
     dom.window.close();
   });
+
+  it("virtualizes long archive lists while scrolling", async () => {
+    const entries = Array.from({ length: 80 }, (_, index) => {
+      const name = `file-${String(index).padStart(3, "0")}.txt`;
+      return { path: name, name, isDirectory: false };
+    });
+    const { document, window, dom } = await createWebviewHarness({ entries });
+    const container = document.querySelector("#treeContainer") as HTMLElement;
+    Object.defineProperty(container, "clientHeight", { configurable: true, value: 88 });
+    Object.defineProperty(container, "scrollTop", {
+      configurable: true,
+      writable: true,
+      value: 0,
+    });
+    container.dispatchEvent(new window.Event("scroll"));
+
+    expect(document.querySelectorAll("tbody tr.row").length).toBeLessThan(80);
+    expect(visibleNames(document)[0]).toBe("file-000.txt");
+
+    container.scrollTop = 22 * 40;
+    container.dispatchEvent(new window.Event("scroll"));
+
+    expect(visibleNames(document)).toContain("file-040.txt");
+    expect(visibleNames(document)).not.toContain("file-000.txt");
+
+    dom.window.close();
+  });
 });
