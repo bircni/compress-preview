@@ -406,4 +406,90 @@ describe("webview harness", () => {
 
     dom.window.close();
   });
+
+  it("posts extractSelected for checked rows", async () => {
+    const { document, window, postedMessages, dom } = await createWebviewHarness({
+      entries: [
+        { path: "keep.txt", name: "keep.txt", isDirectory: false },
+        { path: "skip.txt", name: "skip.txt", isDirectory: false },
+        { path: "nested/", name: "nested", isDirectory: true },
+        { path: "nested/inside.txt", name: "inside.txt", isDirectory: false },
+      ],
+    });
+
+    const extractSelectedBtn = document.querySelector("#extractSelectedBtn") as HTMLButtonElement;
+    expect(extractSelectedBtn.disabled).toBe(true);
+
+    document
+      .querySelector('.rowCheck[data-path="keep.txt"]')
+      ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+    document
+      .querySelector('.rowCheck[data-path="nested/"]')
+      ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+
+    expect(extractSelectedBtn.disabled).toBe(false);
+    expect(extractSelectedBtn.textContent).toContain("2");
+
+    extractSelectedBtn.dispatchEvent(new window.Event("click", { bubbles: true }));
+
+    expect(postedMessages).toContainEqual({
+      type: "extractSelected",
+      paths: ["keep.txt", "nested"],
+    });
+
+    dom.window.close();
+  });
+
+  it("shift-clicks to select a visible range", async () => {
+    const { document, window, postedMessages, dom } = await createWebviewHarness({
+      entries: [
+        { path: "a.txt", name: "a.txt", isDirectory: false },
+        { path: "b.txt", name: "b.txt", isDirectory: false },
+        { path: "c.txt", name: "c.txt", isDirectory: false },
+      ],
+    });
+
+    document
+      .querySelector('.rowCheck[data-path="a.txt"]')
+      ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+    document
+      .querySelector('.rowCheck[data-path="c.txt"]')
+      ?.dispatchEvent(
+        new window.MouseEvent("click", { bubbles: true, cancelable: true, shiftKey: true }),
+      );
+
+    document
+      .querySelector("#extractSelectedBtn")
+      ?.dispatchEvent(new window.Event("click", { bubbles: true }));
+
+    expect(postedMessages).toContainEqual({
+      type: "extractSelected",
+      paths: ["a.txt", "b.txt", "c.txt"],
+    });
+
+    dom.window.close();
+  });
+
+  it("selects all visible rows from the header checkbox", async () => {
+    const { document, window, postedMessages, dom } = await createWebviewHarness({
+      entries: [
+        { path: "one.txt", name: "one.txt", isDirectory: false },
+        { path: "two.txt", name: "two.txt", isDirectory: false },
+      ],
+    });
+
+    const selectAll = document.querySelector("#selectAllCheck") as HTMLInputElement;
+    selectAll.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+
+    document
+      .querySelector("#extractSelectedBtn")
+      ?.dispatchEvent(new window.Event("click", { bubbles: true }));
+
+    expect(postedMessages).toContainEqual({
+      type: "extractSelected",
+      paths: ["one.txt", "two.txt"],
+    });
+
+    dom.window.close();
+  });
 });

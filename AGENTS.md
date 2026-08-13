@@ -20,7 +20,7 @@ Before making changes:
 - VS Code extension that **previews archive files** (ZIP, TAR, GZIP-based, etc.—see `package.json` `customEditors`) in a custom editor instead of the default binary view
 - Lists files and folders inside the archive in a webview
 - Opens **text-based files** (e.g. `.txt`, `.json`, `.md`) read-only in the editor via a custom `compress-preview://` URI scheme
-- **Extract**: single file or “Extract all” (sibling folder named after the zip, or user-chosen path)
+- **Extract**: single file, selected entries (one archive scan), or “Extract all” (sibling folder named after the zip, or user-chosen path)
 - Handles **large archives** with a time-bound list and partial-result state (retry to load more)
 
 **Tech Stack:**
@@ -55,7 +55,7 @@ Before making changes:
 
 **Webview:**
 
-- `webview/content.html` – Single-file UI: archive tree, loading/error/partial states, Retry, Extract all; inline script talks to host via `acquireVsCodeApi()` and `postMessage`
+- `webview/content.html` – Single-file UI: archive tree, loading/error/partial states, Retry, Extract selected, Extract all; inline script talks to host via `acquireVsCodeApi()` and `postMessage`
 - `webview/content.ts` – `getInitialHtml(cspSource, initialData)` loads template from disk, injects CSP and optional initial JSON for first paint
 
 **Utilities:**

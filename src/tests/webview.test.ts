@@ -40,6 +40,7 @@ describe("getInitialHtml", () => {
     expect(html).toContain("layoutTableColumns");
     expect(html).toContain('data-filter="binary"');
     expect(html).toContain('id="expandAllBtn"');
+    expect(html).toContain('id="extractSelectedBtn"');
   });
 
   it("does not request entries again when initial data is embedded", () => {
