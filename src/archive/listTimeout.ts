@@ -1,5 +1,5 @@
 const DEFAULT_TIMEOUT_MS = 10_000;
-export const MAX_LIST_TIMEOUT_MS = 300_000;
+const MAX_LIST_TIMEOUT_MS = 300_000;
 
 export function scaleListTimeoutMs(baseTimeoutMs: number, retryAttempt: number): number {
   const attempt = Number.isFinite(retryAttempt) ? Math.max(0, Math.round(retryAttempt)) : 0;
