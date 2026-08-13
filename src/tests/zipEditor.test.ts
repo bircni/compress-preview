@@ -91,6 +91,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     };
   });
   const extractEntry = vi.fn().mockResolvedValue();
+  const extractEntries = vi.fn().mockResolvedValue();
   const extractAll = vi.fn().mockResolvedValue();
   const extractAllTargetDir = vi
     .fn()
@@ -98,7 +99,12 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
   const markTempPreviewUsed = vi.fn().mockResolvedValue();
 
   let messageHandler:
-    | ((message: { type: string; path?: string; targetPath?: string }) => Promise<void>)
+    | ((message: {
+        type: string;
+        path?: string;
+        paths?: string[];
+        targetPath?: string;
+      }) => Promise<void>)
     | undefined;
 
   let fileWatcherChange: (() => void) | undefined;
@@ -177,6 +183,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
   }));
   vi.doMock("../archive/extract", () => ({
     extractEntry,
+    extractEntries,
     extractAll,
     extractAllTargetDir,
   }));
@@ -240,6 +247,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     showOpenDialog,
     showWarningMessage,
     extractEntry,
+    extractEntries,
     extractAll,
     extractAllTargetDir,
     postMessage,
@@ -597,6 +605,62 @@ describe("ZipPreviewEditorProvider", () => {
       type: "extractResult",
       success: false,
       error: "extract failed",
+    });
+  });
+
+  it("extracts selected paths after choosing a destination folder", async () => {
+    const harness = await createProviderHarness({
+      showOpenDialogResult: [{ fsPath: "/tmp/selected-out" }],
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({
+      type: "extractSelected",
+      paths: ["docs/", "readme.txt"],
+    });
+
+    expect(harness.extractEntries).toHaveBeenCalledWith(
+      harness.archivePath,
+      ["docs/", "readme.txt"],
+      "/tmp/selected-out",
+      { conflictMode: "merge" },
+    );
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "extractResult",
+      success: true,
+      targetPath: "/tmp/selected-out",
+    });
+  });
+
+  it("reports extractSelected cancellation when no target is selected", async () => {
+    const harness = await createProviderHarness({
+      showOpenDialogResult: undefined,
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "extractSelected", paths: ["readme.txt"] });
+
+    expect(harness.extractEntries).not.toHaveBeenCalled();
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "extractResult",
+      success: false,
+      error: "Cancelled",
+    });
+  });
+
+  it("reports extractSelected failures back to the webview", async () => {
+    const harness = await createProviderHarness({
+      showOpenDialogResult: [{ fsPath: "/tmp/selected-out" }],
+    });
+    harness.extractEntries.mockRejectedValueOnce(new Error("batch extract failed"));
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "extractSelected", paths: ["readme.txt"] });
+
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "extractResult",
+      success: false,
+      error: "batch extract failed",
     });
   });
 

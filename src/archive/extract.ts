@@ -1,5 +1,5 @@
 /**
- * Extract single entry or all entries to disk.
+ * Extract a single entry, selected entries, or all entries to disk.
  */
 
 import * as fs from "node:fs";
@@ -37,6 +37,27 @@ export function extractAllTargetDir(archivePath: string): string {
   const baseName = path.basename(resolved);
   const base = stripSupportedArchiveExtension(baseName);
   return path.join(dir, base);
+}
+
+export function normalizeArchiveEntryPath(entryPath: string): string {
+  return entryPath.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
+}
+
+export function entryMatchesSelection(entryPath: string, selectedPaths: string[]): boolean {
+  const normalized = normalizeArchiveEntryPath(entryPath);
+  if (normalized.length === 0) {
+    return false;
+  }
+  for (const selected of selectedPaths) {
+    const want = normalizeArchiveEntryPath(selected);
+    if (want.length === 0) {
+      continue;
+    }
+    if (normalized === want || normalized.startsWith(`${want}/`)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function resolveArchiveDestination(rootDir: string, entryName: string): string {
@@ -364,6 +385,8 @@ function extractAllZip(
   archivePath: string,
   outDir: string,
   conflictMode: "fail" | ExtractAllConflictMode,
+  includeEntry: (entryName: string) => boolean = () => true,
+  requireMatch = false,
 ): Promise<void> {
   let session: ReturnType<typeof beginExtractAll>;
   try {
@@ -393,6 +416,7 @@ function extractAllZip(
         let pending = 0;
         let entriesDone = false;
         let done = false;
+        let matched = 0;
 
         const maybeResolve = () => {
           if (done) {
@@ -401,6 +425,11 @@ function extractAllZip(
           if (entriesDone && pending === 0) {
             done = true;
             zipfile.close();
+            if (matched === 0 && requireMatch) {
+              session.abort();
+              reject(new Error("No matching entries to extract"));
+              return;
+            }
             try {
               session.commit();
               resolve();
@@ -433,6 +462,11 @@ function extractAllZip(
           if (done) {
             return;
           }
+          if (!includeEntry(entry.fileName)) {
+            zipfile.readEntry();
+            return;
+          }
+          matched += 1;
           let destPath: string;
           try {
             destPath = resolveArchiveDestination(resolvedOutDir, entry.fileName);
@@ -491,6 +525,8 @@ function extractAllTar(
   archiveKind: "tar" | "tgz",
   outDir: string,
   conflictMode: "fail" | ExtractAllConflictMode,
+  includeEntry: (entryName: string) => boolean = () => true,
+  requireMatch = false,
 ): Promise<void> {
   let session: ReturnType<typeof beginExtractAll>;
   try {
@@ -505,6 +541,7 @@ function extractAllTar(
     const { source, input, destroy } = createTarInputStream(archivePath, archiveKind);
     const extract = tar.extract();
     let settled = false;
+    let matched = 0;
 
     const finishWithError = (error: unknown) => {
       if (settled) {
@@ -518,6 +555,14 @@ function extractAllTar(
     };
 
     extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
+      if (!includeEntry(header.name)) {
+        stream.resume();
+        stream.on("end", () => {
+          next();
+        });
+        return;
+      }
+      matched += 1;
       let destPath: string;
       try {
         destPath = resolveArchiveDestination(resolvedOutDir, header.name);
@@ -559,6 +604,11 @@ function extractAllTar(
       settled = true;
       destroy();
       extract.destroy();
+      if (matched === 0 && requireMatch) {
+        session.abort();
+        reject(new Error("No matching entries to extract"));
+        return;
+      }
       try {
         session.commit();
         resolve();
@@ -579,7 +629,12 @@ async function extractAllGzip(
   archivePath: string,
   outDir: string,
   conflictMode: "fail" | ExtractAllConflictMode,
+  includeEntry: (entryName: string) => boolean = () => true,
 ): Promise<void> {
+  const entryName = getGzipEntryName(archivePath);
+  if (!includeEntry(entryName)) {
+    throw new Error("No matching entries to extract");
+  }
   let session: ReturnType<typeof beginExtractAll>;
   try {
     session = beginExtractAll(outDir, conflictMode);
@@ -604,16 +659,55 @@ export function extractAll(
   outDir: string,
   options: ExtractAllOptions = {},
 ): Promise<void> {
+  return extractFilteredEntries(archivePath, outDir, options, () => true, false);
+}
+
+/**
+ * Extract the selected archive paths in a single scan.
+ * Folder selections include nested entries.
+ */
+export function extractEntries(
+  archivePath: string,
+  entryPaths: string[],
+  outDir: string,
+  options: ExtractAllOptions = { conflictMode: "merge" },
+): Promise<void> {
+  if (entryPaths.length === 0) {
+    return Promise.reject(new Error("No entries selected"));
+  }
+  return extractFilteredEntries(
+    archivePath,
+    outDir,
+    options,
+    (entryName) => entryMatchesSelection(entryName, entryPaths),
+    true,
+  );
+}
+
+function extractFilteredEntries(
+  archivePath: string,
+  outDir: string,
+  options: ExtractAllOptions,
+  includeEntry: (entryName: string) => boolean,
+  requireMatch: boolean,
+): Promise<void> {
   const conflictMode = resolveExtractAllConflictMode(options);
   const archiveKind = detectArchiveKind(archivePath);
   switch (archiveKind) {
     case "zip":
-      return extractAllZip(archivePath, outDir, conflictMode);
+      return extractAllZip(archivePath, outDir, conflictMode, includeEntry, requireMatch);
     case "tar":
     case "tgz":
-      return extractAllTar(archivePath, archiveKind, outDir, conflictMode);
+      return extractAllTar(
+        archivePath,
+        archiveKind,
+        outDir,
+        conflictMode,
+        includeEntry,
+        requireMatch,
+      );
     case "gz":
-      return extractAllGzip(archivePath, outDir, conflictMode);
+      return extractAllGzip(archivePath, outDir, conflictMode, includeEntry);
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }

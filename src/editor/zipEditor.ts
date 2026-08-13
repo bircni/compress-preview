@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { listEntries, openEntryReadStream } from "../archive/archive";
-import { extractEntry, extractAll, extractAllTargetDir } from "../archive/extract";
+import { extractEntry, extractEntries, extractAll, extractAllTargetDir } from "../archive/extract";
 import { logger } from "../logger";
 import { getInitialHtml } from "../webview/content";
 import { readMaxTextPreviewBytes, readTempPreviewMaxAgeMs } from "./compressPreviewConfig.js";
@@ -109,6 +109,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       listEntries,
       openEntryReadStream,
       extractEntry,
+      extractEntries,
       extractAll,
       extractAllTargetDir,
       cleanupTempPreviews: () => cleanupTempPreviews(readTempPreviewMaxAgeMs()),
