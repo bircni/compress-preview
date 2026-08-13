@@ -2,12 +2,15 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    env: {
+      LZMA_NATIVE_DISABLE: "1",
+    },
     coverage: {
       provider: "v8",
       reporter: ["json-summary", "json", "lcov", "text", "clover"],
       reportsDirectory: ".tmp/coverage",
       include: ["src/**/*.ts"],
-      exclude: ["**/*.test.ts", "src/e2e/**"],
+      exclude: ["**/*.test.ts", "src/tests/**", "src/e2e/**"],
       thresholds: {
         statements: 80,
         branches: 75,

@@ -15,6 +15,13 @@ import {
   extractEntries,
   entryMatchesSelection,
 } from "../archive/extract";
+import {
+  DEFLATE_SEVEN_ZIP_CONTENT,
+  HELLO_COMPRESSED,
+  SAMPLE_TAR_OTHER,
+  SAMPLE_TAR_README,
+  writeCompressedFixture,
+} from "./compressedFixtures";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp/unit-extract");
 const FIXTURES_DIR = path.join(process.cwd(), ".fixtures");
@@ -98,6 +105,10 @@ describe("extract", () => {
     expect(extractAllTargetDir("/tmp/app.apk")).toMatch(/app$/);
     expect(extractAllTargetDir("/tmp/bundle.tar.gz")).toMatch(/bundle$/);
     expect(extractAllTargetDir("/tmp/data.gz")).toMatch(/data$/);
+    expect(extractAllTargetDir("/tmp/bundle.tar.xz")).toMatch(/bundle$/);
+    expect(extractAllTargetDir("/tmp/notes.zst")).toMatch(/notes$/);
+    expect(extractAllTargetDir("/tmp/hello.txt.bz2")).toMatch(/hello.txt$/);
+    expect(extractAllTargetDir("/tmp/archive.7z")).toMatch(/archive$/);
   });
 
   it("extractEntry writes file to outPath", async () => {
@@ -403,5 +414,122 @@ describe("extract", () => {
     await expect(extractAll(tarPath, outDir, { overwrite: true })).rejects.toThrow(
       "Unsupported tar entry type for extraction: link",
     );
+  });
+
+  it.each([
+    ["hello.txt.bz2", "helloBz2"],
+    ["hello.txt.xz", "helloXz"],
+    ["hello.txt.zst", "helloZst"],
+  ] as const)("extracts the decompressed file from %s", async (fileName, fixtureName) => {
+    const archivePath = path.join(TMP_DIR, fileName);
+    writeCompressedFixture(archivePath, fixtureName);
+    const outDir = path.join(TMP_DIR, `${fileName}-out`);
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractAll(archivePath, outDir, { overwrite: true });
+
+    expect(fs.readFileSync(path.join(outDir, "hello.txt"), "utf8")).toBe(HELLO_COMPRESSED);
+    const directPath = path.join(TMP_DIR, `${fileName}-direct.txt`);
+    await extractEntry(archivePath, "hello.txt", directPath);
+    expect(fs.readFileSync(directPath, "utf8")).toBe(HELLO_COMPRESSED);
+  });
+
+  it.each([
+    ["sample.tar.bz2", "sampleTarBz2"],
+    ["sample.tar.xz", "sampleTarXz"],
+    ["sample.tar.zst", "sampleTarZst"],
+  ] as const)("extracts all files from %s", async (fileName, fixtureName) => {
+    const archivePath = path.join(TMP_DIR, fileName);
+    writeCompressedFixture(archivePath, fixtureName);
+    const outDir = path.join(TMP_DIR, `${fileName}-out`);
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractAll(archivePath, outDir, { overwrite: true });
+
+    expect(fs.readFileSync(path.join(outDir, "docs", "readme.txt"), "utf8")).toBe(
+      SAMPLE_TAR_README,
+    );
+    expect(fs.readFileSync(path.join(outDir, "other.txt"), "utf8")).toBe(SAMPLE_TAR_OTHER);
+    const directPath = path.join(TMP_DIR, `${fileName}-readme.txt`);
+    await extractEntry(archivePath, "docs/readme.txt", directPath);
+    expect(fs.readFileSync(directPath, "utf8")).toBe(SAMPLE_TAR_README);
+  });
+
+  it("extracts a single file from a 7z archive", async () => {
+    const archivePath = path.join(TMP_DIR, "extract-one.7z");
+    writeCompressedFixture(archivePath, "sampleSevenZip");
+    const outPath = path.join(TMP_DIR, "seven-zip-one.txt");
+
+    await extractEntry(archivePath, "deflate-test.txt", outPath);
+
+    expect(fs.readFileSync(outPath, "utf8")).toBe(DEFLATE_SEVEN_ZIP_CONTENT);
+  });
+
+  it("extracts a directory entry from a 7z archive", async () => {
+    const archivePath = path.join(TMP_DIR, "extract-dir.7z");
+    writeCompressedFixture(archivePath, "copySevenZip");
+    const outPath = path.join(TMP_DIR, "seven-zip-dir-out");
+    fs.rmSync(outPath, { recursive: true, force: true });
+
+    await extractEntry(archivePath, "data", outPath);
+
+    expect(fs.statSync(outPath).isDirectory()).toBe(true);
+  });
+
+  it("extracts all files from a 7z archive", async () => {
+    const archivePath = path.join(TMP_DIR, "extract-all.7z");
+    writeCompressedFixture(archivePath, "copySevenZip");
+    const outDir = path.join(TMP_DIR, "seven-zip-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractAll(archivePath, outDir, { overwrite: true });
+
+    expect(fs.readFileSync(path.join(outDir, "data", "fixture.js"), "utf8")).toContain(
+      "Test fixture",
+    );
+    expect(fs.existsSync(path.join(outDir, "data", "dir1", "fixture.js"))).toBe(true);
+  });
+
+  it("extractEntries writes only the selected 7z files", async () => {
+    const archivePath = path.join(TMP_DIR, "extract-selected.7z");
+    writeCompressedFixture(archivePath, "copySevenZip");
+    const outDir = path.join(TMP_DIR, "extract-selected-7z-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await extractEntries(archivePath, ["data/fixture.js"], outDir);
+
+    expect(fs.readFileSync(path.join(outDir, "data", "fixture.js"), "utf8")).toContain(
+      "Test fixture",
+    );
+    expect(fs.existsSync(path.join(outDir, "data", "dir1", "fixture.js"))).toBe(false);
+  });
+
+  it("rejects 7z extraction of symbolic links", async () => {
+    const archivePath = path.join(TMP_DIR, "symlink.7z");
+    writeCompressedFixture(archivePath, "symlinkSevenZip");
+    const outDir = path.join(TMP_DIR, "symlink-7z-out");
+    fs.rmSync(outDir, { recursive: true, force: true });
+
+    await expect(extractAll(archivePath, outDir, { overwrite: true })).rejects.toThrow(
+      "Unsupported 7z entry type for extraction: symlink",
+    );
+  });
+
+  it("rejects extractEntry when a 7z entry is missing", async () => {
+    const archivePath = path.join(TMP_DIR, "extract-missing.7z");
+    writeCompressedFixture(archivePath, "sampleSevenZip");
+
+    await expect(
+      extractEntry(archivePath, "missing.txt", path.join(TMP_DIR, "missing-7z.txt")),
+    ).rejects.toThrow("Entry not found in archive: missing.txt");
+  });
+
+  it("rejects extracting a password-protected 7z entry", async () => {
+    const archivePath = path.join(TMP_DIR, "extract-secret.7z");
+    writeCompressedFixture(archivePath, "passwordSevenZip");
+
+    await expect(
+      extractEntry(archivePath, "secret.txt", path.join(TMP_DIR, "secret.txt")),
+    ).rejects.toThrow("Password-protected 7z archives are not supported");
   });
 });

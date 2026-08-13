@@ -5,12 +5,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
-import * as zlib from "node:zlib";
 import tar from "tar-stream";
 import * as yauzl from "yauzl";
 import type { ArchiveEntry, EntryContentStream } from "./entry";
-import { detectArchiveKind, getGzipEntryName } from "./format";
+import { detectArchiveKind, getGzipEntryName, type SingleFileKind, type TarKind } from "./format";
+import { createDecompressTransform } from "./decompress";
 import { formatPartialListMessage } from "./listTimeout";
+import { listSevenZipEntries, openSevenZipEntryReadStream } from "./sevenZip";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const LOADING_INDICATOR_THRESHOLD_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -65,30 +66,30 @@ function isTarDirectory(header: tar.Headers): boolean {
 
 function createTarInputStream(
   archivePath: string,
-  archiveKind: "tar" | "tgz",
+  archiveKind: TarKind,
 ): {
   source: fs.ReadStream;
   input: NodeJS.ReadableStream;
   destroy: () => void;
 } {
   const source = fs.createReadStream(archivePath);
-  if (archiveKind === "tgz") {
-    const gunzip = zlib.createGunzip();
-    source.pipe(gunzip);
+  if (archiveKind === "tar") {
     return {
       source,
-      input: gunzip,
-      destroy: () => {
-        gunzip.destroy();
-        source.destroy();
-      },
+      input: source,
+      destroy: () => source.destroy(),
     };
   }
 
+  const decompress = createDecompressTransform(archiveKind);
+  source.pipe(decompress);
   return {
     source,
-    input: source,
-    destroy: () => source.destroy(),
+    input: decompress,
+    destroy: () => {
+      decompress.destroy();
+      source.destroy();
+    },
   };
 }
 
@@ -180,7 +181,7 @@ function listZipEntries(
 
 function listTarEntries(
   archivePath: string,
-  archiveKind: "tar" | "tgz",
+  archiveKind: TarKind,
   sizeBytes: number,
   timeoutMs: number,
 ): Promise<ListEntriesResult> {
@@ -372,7 +373,7 @@ function openZipEntryReadStream(
 
 function openTarEntryReadStream(
   archivePath: string,
-  archiveKind: "tar" | "tgz",
+  archiveKind: TarKind,
   entryPath: string,
 ): Promise<EntryContentStream> {
   return new Promise((resolve, reject) => {
@@ -446,6 +447,7 @@ function openTarEntryReadStream(
 function openGzipEntryReadStream(
   archivePath: string,
   entryPath: string,
+  kind: SingleFileKind,
 ): Promise<EntryContentStream> {
   const expectedPath = getGzipEntryName(archivePath);
   if (entryPath !== expectedPath) {
@@ -453,8 +455,9 @@ function openGzipEntryReadStream(
   }
 
   const source = fs.createReadStream(archivePath);
-  const gunzip = zlib.createGunzip();
-  source.pipe(gunzip);
+  const decompress = createDecompressTransform(kind);
+  const output = new PassThrough();
+  source.pipe(decompress).pipe(output);
   const archiveEntry = createArchiveEntry(expectedPath, {
     isDirectory: false,
     compressedSize: getArchiveSizeBytes(archivePath),
@@ -462,20 +465,24 @@ function openGzipEntryReadStream(
   });
 
   const cleanup = () => {
-    gunzip.destroy();
+    output.destroy();
+    decompress.destroy();
     source.destroy();
   };
 
-  gunzip.once("end", cleanup);
-  gunzip.once("close", cleanup);
-  gunzip.once("error", cleanup);
-  source.once("error", () => {
-    gunzip.destroy();
+  output.once("end", cleanup);
+  output.once("close", cleanup);
+  output.once("error", cleanup);
+  decompress.once("error", (error) => {
+    output.destroy(error instanceof Error ? error : new Error(String(error)));
+  });
+  source.once("error", (error) => {
+    output.destroy(error instanceof Error ? error : new Error(String(error)));
   });
 
   return Promise.resolve({
     entry: archiveEntry,
-    stream: gunzip,
+    stream: output,
   });
 }
 
@@ -503,9 +510,25 @@ export function listEntries(
       return listZipEntries(archivePath, sizeBytes, timeoutMs);
     case "tar":
     case "tgz":
+    case "tbz":
+    case "txz":
+    case "tzst":
       return listTarEntries(archivePath, archiveKind, sizeBytes, timeoutMs);
     case "gz":
+    case "bz2":
+    case "xz":
+    case "zst":
       return listGzipEntries(archivePath, sizeBytes);
+    case "7z":
+      return listSevenZipEntries(archivePath, sizeBytes, timeoutMs).then((result) => {
+        if (result.isPartial) {
+          return {
+            ...result,
+            message: formatPartialListMessage(result.entries.length, timeoutMs),
+          };
+        }
+        return result;
+      });
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
@@ -526,9 +549,17 @@ export function openEntryReadStream(
       return openZipEntryReadStream(archivePath, entryPath);
     case "tar":
     case "tgz":
+    case "tbz":
+    case "txz":
+    case "tzst":
       return openTarEntryReadStream(archivePath, archiveKind, entryPath);
     case "gz":
-      return openGzipEntryReadStream(archivePath, entryPath);
+    case "bz2":
+    case "xz":
+    case "zst":
+      return openGzipEntryReadStream(archivePath, entryPath, archiveKind);
+    case "7z":
+      return openSevenZipEntryReadStream(archivePath, entryPath);
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }

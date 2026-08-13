@@ -16,6 +16,12 @@ import {
   openEntryReadStream,
 } from "../archive/archive";
 import { formatPartialListMessage, scaleListTimeoutMs } from "../archive/listTimeout";
+import {
+  DEFLATE_SEVEN_ZIP_CONTENT,
+  HELLO_COMPRESSED,
+  SAMPLE_TAR_README,
+  writeCompressedFixture,
+} from "./compressedFixtures";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp/unit-archive");
 const FIXTURES_DIR = path.join(process.cwd(), ".fixtures");
@@ -352,5 +358,97 @@ describe("archive", () => {
     fs.writeFileSync(tgzPath, "not-a-gzip-stream");
 
     await expect(listEntries(tgzPath)).rejects.toThrow();
+  });
+
+  it.each([
+    ["hello.txt.bz2", "helloBz2"],
+    ["hello.txt.xz", "helloXz"],
+    ["hello.txt.zst", "helloZst"],
+  ] as const)("lists and opens a single-file %s archive", async (fileName, fixtureName) => {
+    const archivePath = path.join(TMP_DIR, fileName);
+    writeCompressedFixture(archivePath, fixtureName);
+
+    const listed = await listEntries(archivePath);
+    expect(listed.entries).toEqual([
+      expect.objectContaining({
+        path: "hello.txt",
+        name: "hello.txt",
+        isDirectory: false,
+      }),
+    ]);
+
+    const { stream } = await openEntryReadStream(archivePath, "hello.txt");
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Buffer));
+    }
+    expect(Buffer.concat(chunks).toString("utf8")).toBe(HELLO_COMPRESSED);
+  });
+
+  it.each([
+    ["sample.tar.bz2", "sampleTarBz2"],
+    ["sample.tar.xz", "sampleTarXz"],
+    ["sample.tar.zst", "sampleTarZst"],
+  ] as const)("lists and opens entries from %s", async (fileName, fixtureName) => {
+    const archivePath = path.join(TMP_DIR, fileName);
+    writeCompressedFixture(archivePath, fixtureName);
+
+    const listed = await listEntries(archivePath);
+    expect(listed.entries.map((entry) => entry.path)).toEqual(
+      expect.arrayContaining(["docs/readme.txt", "other.txt"]),
+    );
+
+    const { stream } = await openEntryReadStream(archivePath, "docs/readme.txt");
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Buffer));
+    }
+    expect(Buffer.concat(chunks).toString("utf8")).toBe(SAMPLE_TAR_README);
+  });
+
+  it("lists and opens entries from a 7z archive", async () => {
+    const archivePath = path.join(TMP_DIR, "sample.7z");
+    writeCompressedFixture(archivePath, "sampleSevenZip");
+
+    const listed = await listEntries(archivePath);
+    expect(listed.entries.map((entry) => entry.path)).toEqual(["deflate-test.txt"]);
+
+    const { stream } = await openEntryReadStream(archivePath, "deflate-test.txt");
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Buffer));
+    }
+    expect(Buffer.concat(chunks).toString("utf8")).toBe(DEFLATE_SEVEN_ZIP_CONTENT);
+  });
+
+  it("returns a partial 7z listing when the timeout elapses", async () => {
+    const archivePath = path.join(TMP_DIR, "timeout.7z");
+    writeCompressedFixture(archivePath, "sampleSevenZip");
+
+    const listed = await listEntries(archivePath, { timeoutMs: 0 });
+    expect(listed.isPartial).toBe(true);
+  });
+
+  it("rejects password-protected 7z archives when reading an entry", async () => {
+    const archivePath = path.join(TMP_DIR, "secret.7z");
+    writeCompressedFixture(archivePath, "passwordSevenZip");
+
+    const { stream } = await openEntryReadStream(archivePath, "secret.txt");
+    await expect(
+      (async () => {
+        for await (const chunk of stream) {
+          void chunk;
+        }
+      })(),
+    ).rejects.toThrow("Password-protected 7z archives are not supported");
+  });
+
+  it("rejects when a 7z entry is missing", async () => {
+    const archivePath = path.join(TMP_DIR, "missing-entry.7z");
+    writeCompressedFixture(archivePath, "sampleSevenZip");
+
+    await expect(openEntryReadStream(archivePath, "missing.txt")).rejects.toThrow(
+      "Entry not found in archive: missing.txt",
+    );
   });
 });

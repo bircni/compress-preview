@@ -1,7 +1,7 @@
 {
   "name": "compress-preview",
   "displayName": "Compress Preview",
-  "description": "VS Code extension: preview ZIP, TAR, GZIP, EPUB, DOCX, PPTX, and XLSX archive contents directly in the editor",
+  "description": "VS Code extension: preview ZIP, TAR, GZIP, 7z, XZ, BZIP2, Zstandard, EPUB, DOCX, PPTX, and XLSX archive contents directly in the editor",
   "publisher": "bircni",
   "version": "0.6.1",
   "icon": "assets/icon.png",
@@ -20,6 +20,12 @@
     "tgz",
     "gzip",
     "gz",
+    "7z",
+    "xz",
+    "bzip2",
+    "bz2",
+    "zstd",
+    "zst",
     "jar",
     "apk",
     "vsix",
@@ -54,7 +60,7 @@
   "scripts": {
     "audit": "npm audit --audit-level high",
     "build": "npm run compile && npm run bundle && npm run copy:webview && npm run package",
-    "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node18 --external:vscode --outfile=dist/extension.js --sourcemap",
+    "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node18 --external:vscode --outfile=dist/extension.js --sourcemap --banner:js=\"process.env.LZMA_NATIVE_DISABLE='1';\"",
     "check:fixtures": "tsx scripts/check-fixtures.ts",
     "check-unused": "knip",
     "clean": "rimraf dist",
@@ -84,7 +90,11 @@
     "watch": "tsc --project tsconfig.build.json --watch"
   },
   "dependencies": {
+    "7z-iterator": "^2.2.9",
+    "fzstd": "^0.1.1",
     "tar-stream": "3.2.0",
+    "unbzip2-stream": "^1.4.3",
+    "xz-compat": "^1.2.7",
     "yauzl": "3.4.0"
   },
   "overrides": {
@@ -97,6 +107,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "26.2.0",
     "@types/tar-stream": "3.1.4",
+    "@types/unbzip2-stream": "^1.4.3",
     "@types/vscode": "1.105.0",
     "@types/yauzl": "3.4.0",
     "@types/yazl": "3.3.1",
@@ -246,7 +257,55 @@
             "filenamePattern": "*.tar.gz"
           },
           {
+            "filenamePattern": "*.tbz2"
+          },
+          {
+            "filenamePattern": "*.tbz"
+          },
+          {
+            "filenamePattern": "*.tar.bz2"
+          },
+          {
+            "filenamePattern": "*.tar.bzip2"
+          },
+          {
+            "filenamePattern": "*.txz"
+          },
+          {
+            "filenamePattern": "*.tar.xz"
+          },
+          {
+            "filenamePattern": "*.tzst"
+          },
+          {
+            "filenamePattern": "*.tar.zst"
+          },
+          {
+            "filenamePattern": "*.tar.zstd"
+          },
+          {
             "filenamePattern": "*.gz"
+          },
+          {
+            "filenamePattern": "*.bz2"
+          },
+          {
+            "filenamePattern": "*.bzip2"
+          },
+          {
+            "filenamePattern": "*.xz"
+          },
+          {
+            "filenamePattern": "*.lzma"
+          },
+          {
+            "filenamePattern": "*.zst"
+          },
+          {
+            "filenamePattern": "*.zstd"
+          },
+          {
+            "filenamePattern": "*.7z"
           }
         ]
       }
