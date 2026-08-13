@@ -5,6 +5,7 @@ import type { EntryContentStream } from "../archive/entry";
 import type { ListEntriesOptions, ListEntriesResult } from "../archive/archive";
 import type { ExtractAllOptions } from "../archive/extract";
 import type { InitialEntriesPayload } from "../webview/content";
+import { DEFAULT_MAX_TEXT_PREVIEW_BYTES, isTextPreviewTooLargeError } from "./textPreview";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -53,10 +54,15 @@ export type ZipEditorControllerDeps = {
   zipPath: string;
   cspSource: string;
   listTimeoutMs?: number | (() => number);
+  maxTextPreviewBytes?: number | (() => number);
   setHtml: (html: string) => void;
   reveal: () => void;
   postMessage: (message: unknown) => Thenable<boolean> | Promise<boolean> | boolean | undefined;
-  createTextPreviewUri: (zipPath: string, entryPath: string) => vscode.Uri;
+  createTextPreviewUri: (
+    zipPath: string,
+    entryPath: string,
+    options?: { allowLarge?: boolean },
+  ) => vscode.Uri;
   createFileUri: (fsPath: string) => vscode.Uri;
   getInitialHtml: (cspSource: string, initialData?: InitialEntriesPayload) => string;
   listEntries: (archivePath: string, options?: ListEntriesOptions) => Promise<ListEntriesResult>;
@@ -114,6 +120,31 @@ function isTextEntryName(name: string, textExtensions: Set<string>): boolean {
   return textExtensions.has(ext) || !ext;
 }
 
+const LARGE_PREVIEW_EXTRACT = "Extract instead";
+const LARGE_PREVIEW_OPEN = "Open anyway";
+const LARGE_PREVIEW_CANCEL = "Cancel";
+
+function resolveConfiguredNumber(
+  value: number | (() => number) | undefined,
+  fallback: number,
+): number {
+  if (typeof value === "function") {
+    return value();
+  }
+  return value ?? fallback;
+}
+
+function formatPreviewLimit(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} bytes`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  const megabytes = bytes / (1024 * 1024);
+  return `${megabytes >= 10 ? megabytes.toFixed(0) : megabytes.toFixed(1)} MB`;
+}
+
 function isPathWithinRoot(rootDir: string, candidatePath: string): boolean {
   const resolvedRoot = path.resolve(rootDir);
   const resolvedCandidate = path.resolve(candidatePath);
@@ -138,6 +169,8 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
     }
   }
 
+  const listedSizes = new Map<string, number>();
+
   const postMessage = async (message: unknown): Promise<void> => {
     await deps.postMessage(message);
   };
@@ -145,6 +178,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
   const loadAndSetHtml = async (): Promise<void> => {
     try {
       if (!deps.existsSync(deps.zipPath)) {
+        listedSizes.clear();
         deps.setHtml(
           deps.getInitialHtml(deps.cspSource, {
             error: "File not found.",
@@ -158,6 +192,12 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
             ? deps.listTimeoutMs()
             : (deps.listTimeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
+      listedSizes.clear();
+      for (const entry of result.entries) {
+        if (entry.size !== undefined) {
+          listedSizes.set(entry.path.replace(/\/$/, ""), entry.size);
+        }
+      }
       const entriesForWebview = result.entries.map(({ mtime, ...rest }) => ({
         ...rest,
         ...(mtime !== undefined && {
@@ -173,9 +213,89 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
       );
       deps.reveal();
     } catch (error) {
+      listedSizes.clear();
       const message = error instanceof Error ? error.message : String(error);
       deps.setHtml(deps.getInitialHtml(deps.cspSource, { error: message }));
     }
+  };
+
+  const extractOneEntry = async (
+    entryPath: string,
+    requestedTargetPath?: string,
+  ): Promise<void> => {
+    try {
+      let targetPath: string | undefined = requestedTargetPath;
+      let extractionRoot: string | undefined;
+      if (!targetPath) {
+        const chosen = await deps.showOpenDialog({
+          canSelectFiles: false,
+          canSelectFolders: true,
+          canSelectMany: false,
+          openLabel: "Extract here",
+          title: "Select destination folder",
+        });
+        const folder = chosen?.[0]?.fsPath;
+        if (folder) {
+          extractionRoot = folder;
+          targetPath = deps.getEntryExtractionTarget(folder, entryPath);
+        }
+      }
+      if (!targetPath) {
+        await postMessage({
+          type: "extractResult",
+          success: false,
+          error: "Cancelled",
+        });
+        return;
+      }
+      if (extractionRoot && !isPathWithinRoot(extractionRoot, targetPath)) {
+        await postMessage({
+          type: "extractResult",
+          success: false,
+          error: `Unsafe extraction target path: ${targetPath}`,
+        });
+        return;
+      }
+      await deps.extractEntry(deps.zipPath, entryPath, targetPath);
+      await postMessage({
+        type: "extractResult",
+        success: true,
+        targetPath,
+      });
+    } catch (error) {
+      deps.logError("Extract entry failed", error);
+      const message = error instanceof Error ? error.message : String(error);
+      await postMessage({
+        type: "extractResult",
+        success: false,
+        error: message,
+      });
+    }
+  };
+
+  const promptLargeTextPreview = async (entryPath: string, limitBytes: number): Promise<void> => {
+    const choice = await deps.showWarningMessage(
+      `"${path.basename(entryPath)}" is larger than the text preview limit (${formatPreviewLimit(limitBytes)}). Extract it instead, or open it anyway this once.`,
+      LARGE_PREVIEW_EXTRACT,
+      LARGE_PREVIEW_OPEN,
+      LARGE_PREVIEW_CANCEL,
+    );
+    if (choice === LARGE_PREVIEW_EXTRACT) {
+      await extractOneEntry(entryPath);
+      return;
+    }
+    if (choice === LARGE_PREVIEW_OPEN) {
+      const uri = deps.createTextPreviewUri(deps.zipPath, entryPath, { allowLarge: true });
+      const doc = await deps.openTextDocument(uri);
+      await deps.showTextDocument(doc, { preview: false });
+      await postMessage({ type: "openResult", success: true });
+      return;
+    }
+    await postMessage({
+      type: "openResult",
+      success: false,
+      error: "Cancelled",
+    });
   };
 
   const handleMessage = async (msg: WebviewHostMessage): Promise<void> => {
@@ -205,9 +325,26 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
       const entryPath = msg.path;
       try {
         if (isTextEntryName(path.basename(entryPath), textExtensions)) {
+          const limitBytes = resolveConfiguredNumber(
+            deps.maxTextPreviewBytes,
+            DEFAULT_MAX_TEXT_PREVIEW_BYTES,
+          );
+          const knownSize = listedSizes.get(entryPath.replace(/\/$/, ""));
+          if (limitBytes > 0 && knownSize !== undefined && knownSize > limitBytes) {
+            await promptLargeTextPreview(entryPath, limitBytes);
+            return;
+          }
           const uri = deps.createTextPreviewUri(deps.zipPath, entryPath);
-          const doc = await deps.openTextDocument(uri);
-          await deps.showTextDocument(doc, { preview: false });
+          try {
+            const doc = await deps.openTextDocument(uri);
+            await deps.showTextDocument(doc, { preview: false });
+          } catch (error) {
+            if (isTextPreviewTooLargeError(error) && limitBytes > 0) {
+              await promptLargeTextPreview(entryPath, limitBytes);
+              return;
+            }
+            throw error;
+          }
         } else {
           await deps.cleanupTempPreviews();
           const tempPath = deps.createTempPreviewPath(deps.zipPath, entryPath);
@@ -236,54 +373,7 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
     }
 
     if (msg.type === "extractEntry" && msg.path) {
-      try {
-        let targetPath: string | undefined = msg.targetPath;
-        let extractionRoot: string | undefined;
-        if (!targetPath) {
-          const chosen = await deps.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            openLabel: "Extract here",
-            title: "Select destination folder",
-          });
-          const folder = chosen?.[0]?.fsPath;
-          if (folder) {
-            extractionRoot = folder;
-            targetPath = deps.getEntryExtractionTarget(folder, msg.path);
-          }
-        }
-        if (!targetPath) {
-          await postMessage({
-            type: "extractResult",
-            success: false,
-            error: "Cancelled",
-          });
-          return;
-        }
-        if (extractionRoot && !isPathWithinRoot(extractionRoot, targetPath)) {
-          await postMessage({
-            type: "extractResult",
-            success: false,
-            error: `Unsafe extraction target path: ${targetPath}`,
-          });
-          return;
-        }
-        await deps.extractEntry(deps.zipPath, msg.path, targetPath);
-        await postMessage({
-          type: "extractResult",
-          success: true,
-          targetPath,
-        });
-      } catch (error) {
-        deps.logError("Extract entry failed", error);
-        const message = error instanceof Error ? error.message : String(error);
-        await postMessage({
-          type: "extractResult",
-          success: false,
-          error: message,
-        });
-      }
+      await extractOneEntry(msg.path, msg.targetPath);
       return;
     }
 

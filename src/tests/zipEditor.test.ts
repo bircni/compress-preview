@@ -16,6 +16,8 @@ type ProviderHarnessOptions = {
   watchArchiveFile?: boolean;
   /** Workspace `compress-preview.textExtensions`. */
   textExtensions?: string[];
+  /** Workspace `compress-preview.maxTextPreviewBytes`. */
+  maxTextPreviewBytes?: number;
   listEntriesResult?: {
     entries: {
       path: string;
@@ -111,6 +113,9 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
       }
       if (key === "textExtensions") {
         return options.textExtensions ?? [];
+      }
+      if (key === "maxTextPreviewBytes") {
+        return options.maxTextPreviewBytes ?? defaultValue;
       }
       return defaultValue;
     }),
@@ -324,6 +329,132 @@ describe("ZipPreviewEditorProvider", () => {
 
     expect(harness.openTextDocument).toHaveBeenCalledTimes(1);
     expect(harness.executeCommand).not.toHaveBeenCalled();
+  });
+
+  it("prompts before opening a listed text entry that exceeds the preview limit", async () => {
+    const harness = await createProviderHarness({
+      maxTextPreviewBytes: 1024,
+      showWarningMessageResult: "Cancel",
+      listEntriesResult: {
+        entries: [
+          {
+            path: "huge.log",
+            name: "huge.log",
+            isDirectory: false,
+            size: 4096,
+          },
+        ],
+        isPartial: false,
+        sizeBytes: 4096,
+      },
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "openEntry", path: "huge.log" });
+
+    expect(harness.showWarningMessage).toHaveBeenCalledWith(
+      expect.stringContaining("text preview limit"),
+      "Extract instead",
+      "Open anyway",
+      "Cancel",
+    );
+    expect(harness.openTextDocument).not.toHaveBeenCalled();
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "openResult",
+      success: false,
+      error: "Cancelled",
+    });
+  });
+
+  it("opens an oversized text preview once when the user overrides the limit", async () => {
+    const harness = await createProviderHarness({
+      maxTextPreviewBytes: 1024,
+      showWarningMessageResult: "Open anyway",
+      listEntriesResult: {
+        entries: [
+          {
+            path: "huge.log",
+            name: "huge.log",
+            isDirectory: false,
+            size: 4096,
+          },
+        ],
+        isPartial: false,
+        sizeBytes: 4096,
+      },
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "openEntry", path: "huge.log" });
+
+    expect(harness.openTextDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        value: expect.stringContaining("allowLarge=1"),
+      }),
+    );
+    expect(harness.postMessage).toHaveBeenCalledWith({ type: "openResult", success: true });
+  });
+
+  it("extracts an oversized text entry when the preview prompt asks to extract", async () => {
+    const harness = await createProviderHarness({
+      maxTextPreviewBytes: 1024,
+      showWarningMessageResult: "Extract instead",
+      showOpenDialogResult: [{ fsPath: "/tmp/target" }],
+      listEntriesResult: {
+        entries: [
+          {
+            path: "huge.log",
+            name: "huge.log",
+            isDirectory: false,
+            size: 4096,
+          },
+        ],
+        isPartial: false,
+        sizeBytes: 4096,
+      },
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "openEntry", path: "huge.log" });
+
+    expect(harness.openTextDocument).not.toHaveBeenCalled();
+    expect(harness.extractEntry).toHaveBeenCalledWith(
+      harness.archivePath,
+      "huge.log",
+      path.join("/tmp/target", "huge.log"),
+    );
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "extractResult",
+      success: true,
+      targetPath: path.join("/tmp/target", "huge.log"),
+    });
+  });
+
+  it("prompts after a streamed text preview exceeds the limit", async () => {
+    const oversized = new Error(
+      "Text preview exceeds the configured limit of 1024 bytes. Extract the file or open it once with an override.",
+    );
+    oversized.name = "TextPreviewTooLargeError";
+    const harness = await createProviderHarness({
+      maxTextPreviewBytes: 1024,
+      showWarningMessageResult: "Cancel",
+      openTextDocumentError: oversized,
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "openEntry", path: "docs/readme.txt" });
+
+    expect(harness.showWarningMessage).toHaveBeenCalledWith(
+      expect.stringContaining("text preview limit"),
+      "Extract instead",
+      "Open anyway",
+      "Cancel",
+    );
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "openResult",
+      success: false,
+      error: "Cancelled",
+    });
   });
 
   it("opens binary entries from a temp preview file", async () => {

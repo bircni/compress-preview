@@ -2,6 +2,12 @@ import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as zipContentProviderModule from "../editor/zipContentProvider";
 
+function mockPreviewConfig(maxTextPreviewBytes = 2 * 1024 * 1024): void {
+  vi.doMock("../editor/compressPreviewConfig", () => ({
+    readMaxTextPreviewBytes: () => maxTextPreviewBytes,
+  }));
+}
+
 describe("zipContentProvider", () => {
   afterEach(() => {
     vi.resetModules();
@@ -23,6 +29,7 @@ describe("zipContentProvider", () => {
       virtual: true,
     });
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
+    mockPreviewConfig();
 
     const { ZipContentProvider } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -49,6 +56,7 @@ describe("zipContentProvider", () => {
 
     vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
+    mockPreviewConfig();
 
     const { ZipContentProvider } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -69,6 +77,7 @@ describe("zipContentProvider", () => {
 
     vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
+    mockPreviewConfig();
 
     const { ZipContentProvider } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -88,6 +97,7 @@ describe("zipContentProvider", () => {
   it("rejects invalid preview URIs", async () => {
     vi.doMock("vscode", () => ({}), { virtual: true });
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+    mockPreviewConfig();
 
     const { ZipContentProvider } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -115,6 +125,7 @@ describe("zipContentProvider", () => {
       { virtual: true },
     );
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+    mockPreviewConfig();
 
     const { registerZipContentProvider, makeZipPreviewUri } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -138,6 +149,7 @@ describe("zipContentProvider", () => {
     const parse = vi.fn((value: string) => ({ value }));
     vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+    mockPreviewConfig();
 
     const { makeZipPreviewUri } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -161,6 +173,7 @@ describe("zipContentProvider", () => {
     const parse = vi.fn((value: string) => ({ value }));
     vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+    mockPreviewConfig();
 
     const { makeZipPreviewUri } =
       (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
@@ -170,5 +183,71 @@ describe("zipContentProvider", () => {
 
     expect(raw).toContain("/docs/re%23ad%3Fme.yaml?zip=");
     expect(raw).toContain("entry=docs%2Fre%23ad%3Fme.yaml");
+  });
+
+  it("rejects when the decompressed preview exceeds the configured byte limit", async () => {
+    const openEntryReadStream = vi.fn().mockImplementation(async () => {
+      const stream = new PassThrough();
+      queueMicrotask(() => stream.end("abcdefghijklmnop"));
+      return {
+        entry: { path: "huge.log", name: "huge.log", isDirectory: false },
+        stream,
+      };
+    });
+
+    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
+    mockPreviewConfig(8);
+
+    const { ZipContentProvider } =
+      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const provider = new ZipContentProvider();
+
+    await expect(
+      provider.provideTextDocumentContent({
+        query: "zip=%2Ftmp%2Farchive.zip&entry=huge.log",
+        path: "",
+      } as never),
+    ).rejects.toMatchObject({ name: "TextPreviewTooLargeError", limitBytes: 8 });
+  });
+
+  it("skips the byte limit when the URI requests a one-time large preview", async () => {
+    const openEntryReadStream = vi.fn().mockImplementation(async () => {
+      const stream = new PassThrough();
+      queueMicrotask(() => stream.end("abcdefghijklmnop"));
+      return {
+        entry: { path: "huge.log", name: "huge.log", isDirectory: false },
+        stream,
+      };
+    });
+
+    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
+    mockPreviewConfig(8);
+
+    const { ZipContentProvider } =
+      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const provider = new ZipContentProvider();
+    const content = await provider.provideTextDocumentContent({
+      query: "zip=%2Ftmp%2Farchive.zip&entry=huge.log&allowLarge=1",
+      path: "",
+    } as never);
+
+    expect(content).toBe("abcdefghijklmnop");
+  });
+
+  it("encodes the one-time large preview flag on the URI", async () => {
+    const parse = vi.fn((value: string) => ({ value }));
+    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
+    vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
+    mockPreviewConfig();
+
+    const { makeZipPreviewUri } =
+      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+
+    makeZipPreviewUri("/tmp/chart.zip", "huge.log", { allowLarge: true });
+    const raw = parse.mock.lastCall?.[0] ?? "";
+
+    expect(raw).toContain("entry=huge.log&allowLarge=1");
   });
 });

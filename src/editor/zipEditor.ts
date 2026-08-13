@@ -5,7 +5,7 @@ import { listEntries, openEntryReadStream } from "../archive/archive";
 import { extractEntry, extractAll, extractAllTargetDir } from "../archive/extract";
 import { logger } from "../logger";
 import { getInitialHtml } from "../webview/content";
-import { readTempPreviewMaxAgeMs } from "./compressPreviewConfig.js";
+import { readMaxTextPreviewBytes, readTempPreviewMaxAgeMs } from "./compressPreviewConfig.js";
 import {
   cleanupTempPreviews,
   createTempPreviewPath,
@@ -92,6 +92,7 @@ export class ZipPreviewEditorProvider implements vscode.CustomReadonlyEditorProv
       zipPath,
       cspSource,
       listTimeoutMs: () => getZipEditorTestListTimeoutMs(readListTimeoutMs()),
+      maxTextPreviewBytes: () => readMaxTextPreviewBytes(),
       setHtml: (html) => {
         webviewPanel.webview.html = html;
       },

@@ -152,6 +152,13 @@
             "type": "string"
           },
           "markdownDescription": "Additional file extensions to treat as text previews (without dots, for example `toml`, `lock`)."
+        },
+        "compress-preview.maxTextPreviewBytes": {
+          "type": "number",
+          "default": 2097152,
+          "minimum": 0,
+          "maximum": 104857600,
+          "markdownDescription": "Maximum decompressed size in bytes for text previews. Larger files prompt to extract or open once anyway. Set to `0` to disable the limit."
         }
       }
     },

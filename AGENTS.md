@@ -192,6 +192,12 @@ This runs check-unused, lint, format, test:coverage, and build. Fix any failures
 - `src/archive/archive.ts`: `listEntries`, `DEFAULT_TIMEOUT_MS`, `LOADING_INDICATOR_THRESHOLD`.
 - User-facing list timeout: `compress-preview.listTimeoutMs` in `package.json`; read in `zipEditor.ts` (with test overrides via `zipEditorTestBridge`).
 
+### Changing the text preview size limit
+
+- Stream enforcement: `src/editor/textPreview.ts` (`readTextPreviewStream`).
+- URI override: `makeZipPreviewUri(..., { allowLarge: true })` in `src/editor/zipContentProvider.ts`.
+- User setting: `compress-preview.maxTextPreviewBytes`; `readMaxTextPreviewBytes()` in `compressPreviewConfig.ts`. The editor prompts to extract or open once when a preview would exceed the limit.
+
 ### Changing temp binary preview cache TTL
 
 - `src/editor/archivePaths.ts`: `cleanupTempPreviews(maxAgeMs?)`, `DEFAULT_TEMP_PREVIEW_MAX_AGE_MS`.
