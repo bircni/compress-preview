@@ -35,6 +35,8 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 Text-like files open directly in VS Code as read-only virtual documents, including common formats such as:\
 `.txt`, `.json`, `.md`, `.xml`, `.html`, `.css`, `.js`, `.ts`, `.yml`, `.yaml`, `.csv`, `.log`
 
+Additional extensions in `compress-preview.textExtensions` are classified as text in both the archive tree and the editor, so a `.toml` file is not shown as Binary.
+
 Common binary files open through a temporary extracted preview file so they can use VS Code's normal file handling. GZIP archives expose a single decompressed file entry in the preview.
 
 ## Settings

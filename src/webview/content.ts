@@ -7,6 +7,7 @@ export type InitialEntriesPayload = {
     path: string;
     name: string;
     isDirectory: boolean;
+    kind?: "text" | "binary" | "folder";
     size?: number;
     compressedSize?: number;
     mtime?: string | number;

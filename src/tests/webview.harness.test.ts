@@ -10,6 +10,7 @@ type HarnessEntry = {
   path: string;
   name: string;
   isDirectory: boolean;
+  kind?: "text" | "binary" | "folder";
   size?: number;
   compressedSize?: number;
   mtime?: string | number;
@@ -125,6 +126,28 @@ describe("webview harness", () => {
       .querySelector('[data-filter="binary"]')
       ?.dispatchEvent(new window.Event("click", { bubbles: true }));
     expect(visibleNames(document)).toEqual(["image.png"]);
+
+    dom.window.close();
+  });
+
+  it("uses host-provided kind for filters instead of the hardcoded extension table", async () => {
+    const { document, window, dom } = await createWebviewHarness({
+      entries: [
+        { path: "config.toml", name: "config.toml", isDirectory: false, kind: "text" },
+        { path: "data.bin", name: "data.bin", isDirectory: false, kind: "binary" },
+      ],
+    });
+
+    const kinds = [...document.querySelectorAll('tbody tr.row [data-col="kind"]')].map((element) =>
+      element.textContent?.trim(),
+    );
+    expect(kinds).toContain("Text");
+    expect(kinds).toContain("Binary");
+
+    document
+      .querySelector('[data-filter="text"]')
+      ?.dispatchEvent(new window.Event("click", { bubbles: true }));
+    expect(visibleNames(document)).toEqual(["config.toml"]);
 
     dom.window.close();
   });
