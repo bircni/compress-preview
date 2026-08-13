@@ -5,25 +5,14 @@
 
 import * as vscode from "vscode";
 import { openEntryReadStream } from "../archive/archive";
+import { readMaxTextPreviewBytes } from "./compressPreviewConfig";
+import { readTextPreviewStream } from "./textPreview";
 
 const SCHEME = "compress-preview";
 
-function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Uint8Array[] = [];
-    stream.on("data", (chunk: Buffer | string) => {
-      if (typeof chunk === "string") {
-        chunks.push(Buffer.from(chunk, "utf8"));
-        return;
-      }
-      chunks.push(chunk);
-    });
-    stream.on("end", () => {
-      resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-    stream.on("error", reject);
-  });
-}
+export type ZipPreviewUriOptions = {
+  allowLarge?: boolean;
+};
 
 export class ZipContentProvider implements vscode.TextDocumentContentProvider {
   async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
@@ -34,7 +23,9 @@ export class ZipContentProvider implements vscode.TextDocumentContentProvider {
       throw new Error("Invalid compress-preview URI");
     }
     const { stream } = await openEntryReadStream(zipPath, entryPath);
-    return streamToString(stream);
+    const allowLarge = params.get("allowLarge") === "1";
+    const maxBytes = allowLarge ? 0 : readMaxTextPreviewBytes();
+    return readTextPreviewStream(stream, maxBytes);
   }
 }
 
@@ -52,14 +43,19 @@ export function registerZipContentProvider(context: vscode.ExtensionContext): vo
  * tab label and the language mode from the URI path, so leaving it empty shows a nameless tab
  * and falls back to plain text. The query stays authoritative when resolving the content.
  */
-export function makeZipPreviewUri(zipPath: string, entryPath: string): vscode.Uri {
+export function makeZipPreviewUri(
+  zipPath: string,
+  entryPath: string,
+  options?: ZipPreviewUriOptions,
+): vscode.Uri {
   const encodedEntryPath = entryPath
     .replaceAll("\\", "/")
     .split("/")
     .filter((segment) => segment.length > 0 && segment !== ".")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+  const allowLarge = options?.allowLarge === true ? "&allowLarge=1" : "";
   return vscode.Uri.parse(
-    `${SCHEME}://preview/${encodedEntryPath}?zip=${encodeURIComponent(zipPath)}&entry=${encodeURIComponent(entryPath)}`,
+    `${SCHEME}://preview/${encodedEntryPath}?zip=${encodeURIComponent(zipPath)}&entry=${encodeURIComponent(entryPath)}${allowLarge}`,
   );
 }

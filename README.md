@@ -46,6 +46,7 @@ Open **Settings** and search for **Compress Preview**, or edit `settings.json`:
 | `compress-preview.watchArchiveFile` | `true` | Reload the preview when the archive file changes on disk. |
 | `compress-preview.tempPreviewMaxAgeDays` | `7` | Days to keep cached binary previews under the OS temp folder before pruning. |
 | `compress-preview.textExtensions` | `[]` | Additional extensions to treat as text (for example `toml`, `lock`) so entries open in the text preview provider. |
+| `compress-preview.maxTextPreviewBytes` | `2097152` | Max decompressed size for text previews. Larger files prompt to extract or open once. Set to `0` to disable. |
 
 ## Notes
 
@@ -53,6 +54,7 @@ Open **Settings** and search for **Compress Preview**, or edit `settings.json`:
 - Binary previews are extracted to a temporary OS-specific cache path under `compress-preview/` before opening.
 - Cached binary previews reuse the same archive-entry path and are pruned after the configured number of days without use.
 - Very large archives may show a partial list first, with a retry option.
+- Text previews stop at `compress-preview.maxTextPreviewBytes` (2 MB by default) so a huge log cannot exhaust memory. You can extract the file or open it once anyway.
 - Folder entries are shown in the archive view but cannot be opened as files.
 
 ## Testing
