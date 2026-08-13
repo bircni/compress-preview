@@ -670,15 +670,17 @@ export function extractEntries(
   archivePath: string,
   entryPaths: string[],
   outDir: string,
-  options: ExtractAllOptions = { conflictMode: "merge" },
+  options: ExtractAllOptions = {},
 ): Promise<void> {
   if (entryPaths.length === 0) {
     return Promise.reject(new Error("No entries selected"));
   }
+  const resolvedOptions: ExtractAllOptions =
+    options.conflictMode == null && options.overwrite == null ? { conflictMode: "merge" } : options;
   return extractFilteredEntries(
     archivePath,
     outDir,
-    options,
+    resolvedOptions,
     (entryName) => entryMatchesSelection(entryName, entryPaths),
     true,
   );
