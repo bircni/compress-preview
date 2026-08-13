@@ -320,7 +320,7 @@ describe("Compress Preview extension host", () => {
     fs.rmSync(defaultDir, { recursive: true, force: true });
   });
 
-  it("supports overwrite, cancel, and choose-other-folder extract-all flows", async () => {
+  it("supports merge, replace, cancel, and choose-other-folder extract-all flows", async () => {
     const archiveUri = fixtureUri("sample-app.apk");
     const defaultDir = path.join(path.dirname(archiveUri.fsPath), "sample-app");
     fs.rmSync(defaultDir, { recursive: true, force: true });
@@ -341,7 +341,15 @@ describe("Compress Preview extension host", () => {
     });
     assert.ok(fs.existsSync(path.join(defaultDir, "stale.txt")));
 
-    await setEditorOverrides({ nextWarningChoice: "Overwrite" });
+    await setEditorOverrides({ nextWarningChoice: "Merge" });
+    await clearEditorMessages();
+    await postEditorMessage({ type: "extractAll" });
+    await waitFor(() => {
+      assert.ok(fs.existsSync(path.join(defaultDir, "docs", "manifest.json")));
+      assert.ok(fs.existsSync(path.join(defaultDir, "stale.txt")));
+    });
+
+    await setEditorOverrides({ nextWarningChoices: ["Replace folder", "Replace folder"] });
     await clearEditorMessages();
     await postEditorMessage({ type: "extractAll" });
     await waitFor(() => {
@@ -352,7 +360,7 @@ describe("Compress Preview extension host", () => {
     const alternateParent = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-extract-all-"));
     fs.mkdirSync(path.join(alternateParent, "sample-app"), { recursive: true });
     await setEditorOverrides({
-      nextWarningChoice: "Choose other folder",
+      nextWarningChoices: ["Choose other folder", "Merge"],
       nextOpenDialogPaths: [alternateParent],
     });
     await clearEditorMessages();
