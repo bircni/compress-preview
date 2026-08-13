@@ -220,11 +220,18 @@
     .treeTable tbody tr.row.is-selected {
       background: var(--list-active);
     }
+    .treeTable tbody tr.row.is-focused {
+      outline: 1px solid var(--list-focus);
+      outline-offset: -1px;
+    }
     .treeTable tbody tr.row:hover {
       background: var(--list-hover);
     }
     .treeTable tbody tr.row.is-selected:hover {
       background: var(--list-active);
+    }
+    .treeContainer:focus {
+      outline: none;
     }
     .colHeader {
       appearance: none;
@@ -528,7 +535,7 @@
       </div>
       <p id="statusText" class="statusLine">Preparing archive</p>
     </header>
-    <div class="treeContainer" id="treeContainer">
+    <div class="treeContainer" id="treeContainer" tabindex="0" role="treegrid" aria-label="Archive contents">
       <div id="loading" class="state">Loading archive contents...</div>
       <div id="error" class="state"></div>
       <div id="empty" class="state">No matching archive entries for the current filter.</div>
@@ -625,6 +632,7 @@
     var ROW_OVERSCAN = 12;
     var virtRangeStart = 0;
     var virtRangeEnd = 0;
+    var focusedIndex = -1;
     var activeFilter = 'all';
     var searchQuery = '';
     var activeSort = 'pathAsc';
@@ -1160,10 +1168,11 @@
         : '<button class="rowNameButton" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Open ' + escapeHtml(node.entry.name || node.entry.path || '') + '">' + displayName + '</button>';
       var fullPath = normalizePath(node.entry.path || node.entry.name || '');
       var selected = isPathSelected(node.entry.path);
+      var focused = index === focusedIndex;
       var checkbox = '<input class="rowCheck" type="checkbox" data-action="select" data-path="' + escapeHtml(node.entry.path) + '" data-index="' + index + '" aria-label="Select ' + escapeHtml(node.entry.name || node.entry.path || '') + '"' + (selected ? ' checked' : '') + '>';
 
       return ''
-        + '<tr class="row' + (selected ? ' is-selected' : '') + '" data-kind="' + (isFolder ? 'dir' : 'file') + '" data-path="' + escapeHtml(node.entry.path) + '" data-index="' + index + '" title="' + escapeHtml(fullPath) + '">'
+        + '<tr class="row' + (selected ? ' is-selected' : '') + (focused ? ' is-focused' : '') + '" data-kind="' + (isFolder ? 'dir' : 'file') + '" data-path="' + escapeHtml(node.entry.path) + '" data-index="' + index + '" title="' + escapeHtml(fullPath) + '" aria-selected="' + (focused || selected ? 'true' : 'false') + '">'
         + '<td class="colName" data-col="name">'
         + '<div class="colNameInner">'
         + checkbox
@@ -1216,6 +1225,9 @@
       visibleTree.forEach(function(nodeState) {
         collectVisibleRows(nodeState, 0, treeState, visibleRows, counters);
       });
+      if (focusedIndex >= visibleRows.length) {
+        focusedIndex = visibleRows.length - 1;
+      }
       var range = getVirtualRange(visibleRows.length);
       virtRangeStart = range.start;
       virtRangeEnd = range.end;
@@ -1333,10 +1345,170 @@
         setPathSelected(targetPath, !isPathSelected(targetPath));
         lastAnchorIndex = index;
       }
+      if (index >= 0) focusedIndex = index;
       renderEntries();
     }
 
+    function focusedRow() {
+      return focusedIndex >= 0 ? visibleRows[focusedIndex] : null;
+    }
+
+    function applyFocusedRowClass() {
+      if (!treeEl) return;
+      treeEl.querySelectorAll('tr.row').forEach(function(el) {
+        var index = Number(el.getAttribute('data-index'));
+        var isFocused = index === focusedIndex;
+        el.classList.toggle('is-focused', isFocused);
+        if (isFocused || el.classList.contains('is-selected')) {
+          el.setAttribute('aria-selected', 'true');
+        } else {
+          el.setAttribute('aria-selected', 'false');
+        }
+      });
+    }
+
+    function ensureRowVisible(index) {
+      if (!treeContainerEl || index < 0 || !treeContainerEl.clientHeight) return;
+      var headerHeight = ROW_HEIGHT;
+      var rowTop = index * ROW_HEIGHT;
+      var viewTop = treeContainerEl.scrollTop;
+      var viewBottom = viewTop + treeContainerEl.clientHeight - headerHeight;
+      if (rowTop < viewTop) {
+        treeContainerEl.scrollTop = rowTop;
+      } else if (rowTop + ROW_HEIGHT > viewBottom) {
+        treeContainerEl.scrollTop = rowTop + ROW_HEIGHT - (treeContainerEl.clientHeight - headerHeight);
+      }
+    }
+
+    function setFocusedIndex(index) {
+      if (!visibleRows.length) {
+        focusedIndex = -1;
+        applyFocusedRowClass();
+        return;
+      }
+      focusedIndex = Math.max(0, Math.min(visibleRows.length - 1, index));
+      ensureRowVisible(focusedIndex);
+      var range = getVirtualRange(visibleRows.length);
+      if (focusedIndex < range.start || focusedIndex >= range.end) {
+        paintTreeRows();
+        return;
+      }
+      applyFocusedRowClass();
+    }
+
+    function isTypingTarget(target) {
+      if (!target || !target.tagName) return false;
+      var tag = String(target.tagName).toUpperCase();
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function handleTreeKeydown(event) {
+      if (isTypingTarget(event.target)) return;
+      if (!visibleRows.length) return;
+      var key = event.key;
+      var cmd = event.metaKey || event.ctrlKey;
+
+      if (cmd && (key === 'a' || key === 'A')) {
+        event.preventDefault();
+        visibleRows.forEach(function(row) {
+          setPathSelected(row.node.entry.path, true);
+        });
+        lastAnchorIndex = 0;
+        renderEntries();
+        return;
+      }
+
+      if (key === 'ArrowDown') {
+        event.preventDefault();
+        setFocusedIndex(focusedIndex < 0 ? 0 : focusedIndex + 1);
+        return;
+      }
+      if (key === 'ArrowUp') {
+        event.preventDefault();
+        setFocusedIndex(focusedIndex < 0 ? 0 : focusedIndex - 1);
+        return;
+      }
+      if (key === 'Home') {
+        event.preventDefault();
+        setFocusedIndex(0);
+        return;
+      }
+      if (key === 'End') {
+        event.preventDefault();
+        setFocusedIndex(visibleRows.length - 1);
+        return;
+      }
+      if (key === 'ArrowLeft') {
+        event.preventDefault();
+        var leftRow = focusedRow();
+        if (leftRow && leftRow.isFolder && !leftRow.isCollapsed) {
+          collapsedPaths[leftRow.node.key] = true;
+          renderEntries();
+          return;
+        }
+        if (leftRow && leftRow.level > 0) {
+          for (var i = focusedIndex - 1; i >= 0; i -= 1) {
+            if (visibleRows[i].level === leftRow.level - 1) {
+              setFocusedIndex(i);
+              return;
+            }
+          }
+        }
+        return;
+      }
+      if (key === 'ArrowRight') {
+        event.preventDefault();
+        var rightRow = focusedRow();
+        if (rightRow && rightRow.isFolder && rightRow.isCollapsed) {
+          collapsedPaths[rightRow.node.key] = false;
+          renderEntries();
+          return;
+        }
+        if (rightRow && rightRow.hasChildren && !rightRow.isCollapsed) {
+          setFocusedIndex(focusedIndex + 1);
+        }
+        return;
+      }
+      if (key === 'Enter') {
+        event.preventDefault();
+        var enterRow = focusedRow();
+        if (!enterRow) return;
+        if (enterRow.isFolder) {
+          collapsedPaths[enterRow.node.key] = !collapsedPaths[enterRow.node.key];
+          renderEntries();
+          return;
+        }
+        if (vscode) vscode.postMessage({ type: 'openEntry', path: enterRow.node.entry.path });
+        return;
+      }
+      if (key === ' ') {
+        event.preventDefault();
+        var spaceRow = focusedRow();
+        if (!spaceRow) return;
+        if (event.shiftKey && lastAnchorIndex >= 0) {
+          var start = Math.min(lastAnchorIndex, focusedIndex);
+          var end = Math.max(lastAnchorIndex, focusedIndex);
+          for (var s = start; s <= end; s += 1) {
+            setPathSelected(visibleRows[s].node.entry.path, true);
+          }
+        } else {
+          setPathSelected(spaceRow.node.entry.path, !isPathSelected(spaceRow.node.entry.path));
+          lastAnchorIndex = focusedIndex;
+        }
+        renderEntries();
+      }
+    }
+
     function bindRowActions() {
+      treeEl.querySelectorAll('tr.row').forEach(function(rowEl) {
+        rowEl.addEventListener('click', function(event) {
+          if (event.target.closest && event.target.closest('[data-action]')) return;
+          var index = Number(rowEl.getAttribute('data-index'));
+          if (Number.isNaN(index)) return;
+          focusedIndex = index;
+          applyFocusedRowClass();
+        });
+      });
       treeEl.querySelectorAll('[data-action]').forEach(function(button) {
         button.addEventListener('click', function(event) {
           var action = button.getAttribute('data-action');
@@ -1452,6 +1624,7 @@
       selectedPaths = {};
       lastAnchorIndex = -1;
       visibleRows = [];
+      focusedIndex = -1;
       updateFolderButtons();
       if (errorEl) {
         errorEl.style.display = 'block';
@@ -1521,6 +1694,7 @@
         if (range.start === virtRangeStart && range.end === virtRangeEnd) return;
         paintTreeRows();
       });
+      treeContainerEl.addEventListener('keydown', handleTreeKeydown);
     }
 
     if (refreshBtn) {

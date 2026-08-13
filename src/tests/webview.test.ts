@@ -33,6 +33,7 @@ describe("getInitialHtml", () => {
     expect(script).toContain("function buildTree(entries)");
     expect(script).toContain("function getVirtualRange(rowCount)");
     expect(html).toContain('id="treeContainer"');
+    expect(script).toContain("function handleTreeKeydown(event)");
     expect(html).toContain('placeholder="Search files"');
     expect(html).toContain('data-sort="size"');
     expect(html).toContain('data-sort="mtime"');
