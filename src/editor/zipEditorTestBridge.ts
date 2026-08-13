@@ -5,6 +5,7 @@ export type ZipEditorTestOverrides = {
   listTimeoutMs?: number;
   nextOpenDialogPaths?: string[] | null;
   nextWarningChoice?: string | null;
+  nextWarningChoices?: (string | null)[];
 };
 
 export type ZipEditorTestState = {
@@ -35,8 +36,12 @@ export function setZipEditorTestOverrides(overrides: ZipEditorTestOverrides): vo
     zipEditorTestOverrides.nextOpenDialogPaths = overrides.nextOpenDialogPaths;
   }
 
-  if ("nextWarningChoice" in overrides) {
+  if ("nextWarningChoices" in overrides) {
+    zipEditorTestOverrides.nextWarningChoices = overrides.nextWarningChoices;
+    delete zipEditorTestOverrides.nextWarningChoice;
+  } else if ("nextWarningChoice" in overrides) {
     zipEditorTestOverrides.nextWarningChoice = overrides.nextWarningChoice;
+    zipEditorTestOverrides.nextWarningChoices = [overrides.nextWarningChoice];
   }
 }
 
@@ -48,6 +53,7 @@ export function resetZipEditorTestState(): void {
   delete zipEditorTestOverrides.listTimeoutMs;
   delete zipEditorTestOverrides.nextOpenDialogPaths;
   delete zipEditorTestOverrides.nextWarningChoice;
+  delete zipEditorTestOverrides.nextWarningChoices;
   activeZipEditorTestSession = undefined;
 }
 
@@ -134,6 +140,15 @@ async function zipEditorWarningMessageHandler(
   message: Parameters<ZipEditorControllerDeps["showWarningMessage"]>[0],
   ...items: Parameters<ZipEditorControllerDeps["showWarningMessage"]>[1][]
 ): ReturnType<ZipEditorControllerDeps["showWarningMessage"]> {
+  const queuedChoices = zipEditorTestOverrides.nextWarningChoices;
+  if (queuedChoices !== undefined) {
+    const nextChoice = queuedChoices.shift();
+    if (queuedChoices.length === 0) {
+      delete zipEditorTestOverrides.nextWarningChoices;
+      delete zipEditorTestOverrides.nextWarningChoice;
+    }
+    return nextChoice ?? undefined;
+  }
   if (zipEditorTestOverrides.nextWarningChoice !== undefined) {
     const nextChoice = zipEditorTestOverrides.nextWarningChoice;
     delete zipEditorTestOverrides.nextWarningChoice;

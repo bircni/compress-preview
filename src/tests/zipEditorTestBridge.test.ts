@@ -103,6 +103,41 @@ describe("zipEditorTestBridge", () => {
     await expect(warningMessage("Folder exists", "Overwrite", "Cancel")).resolves.toBe("Overwrite");
   });
 
+  it("consumes queued warning choices in order", async () => {
+    const showOpenDialog = vi.fn();
+    const showWarningMessage = vi.fn().mockResolvedValue("From vscode");
+
+    vi.doMock(
+      "vscode",
+      () => ({
+        Uri: {
+          file: (fsPath: string) => ({ fsPath }),
+        },
+        window: {
+          showOpenDialog,
+          showWarningMessage,
+        },
+      }),
+      { virtual: true },
+    );
+
+    const bridge =
+      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
+    const warningMessage = bridge.createZipEditorWarningMessageHandler();
+
+    bridge.setZipEditorTestOverrides({
+      nextWarningChoices: ["Merge", "Replace folder"],
+    });
+
+    await expect(warningMessage("Folder exists", "Merge", "Replace folder")).resolves.toBe("Merge");
+    await expect(warningMessage("Folder exists", "Merge", "Replace folder")).resolves.toBe(
+      "Replace folder",
+    );
+    await expect(warningMessage("Folder exists", "Merge", "Replace folder")).resolves.toBe(
+      "From vscode",
+    );
+  });
+
   it("resets overrides and rejects dispatch without an active session", async () => {
     vi.doMock(
       "vscode",
