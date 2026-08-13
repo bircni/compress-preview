@@ -31,7 +31,8 @@ describe("getInitialHtml", () => {
     expect(script).toContain("var statusTextEl = document.getElementById('statusText');");
     expect(script).toContain("function compareEntries(a, b)");
     expect(script).toContain("function buildTree(entries)");
-    expect(script).toContain("function renderVisibleTree()");
+    expect(script).toContain("function getVirtualRange(rowCount)");
+    expect(html).toContain('id="treeContainer"');
     expect(html).toContain('placeholder="Search files"');
     expect(html).toContain('data-sort="size"');
     expect(html).toContain('data-sort="mtime"');
