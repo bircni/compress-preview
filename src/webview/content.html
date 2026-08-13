@@ -1572,8 +1572,14 @@
       applySort(asc);
     }
 
-    function paintTreeRows() {
+    function paintTreeRows(options) {
       var rendered = renderVisibleTree();
+      var hasRows = rendered.counters.total > 0;
+      if (options && options.showTable) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = hasRows ? 'none' : 'block';
+        if (treeTableEl) treeTableEl.style.display = hasRows ? 'block' : 'none';
+      }
       if (treeEl) treeEl.innerHTML = rendered.html;
       bindRowActions();
       updateSelectAllCheck();
@@ -1583,10 +1589,7 @@
 
     function renderEntries() {
       clearMessages();
-      var rendered = paintTreeRows();
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (emptyEl) emptyEl.style.display = rendered.counters.total ? 'none' : 'block';
-      if (treeTableEl) treeTableEl.style.display = rendered.counters.total ? 'block' : 'none';
+      var rendered = paintTreeRows({ showTable: true });
       updateSummary(rendered.counters);
       updateFolderButtons();
       updateSortHeaders();

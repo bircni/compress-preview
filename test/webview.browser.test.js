@@ -206,11 +206,11 @@ test("webview browser test: metadata columns stay aligned for nested rows", asyn
   expectAlignedColumns(alignment);
 
   const nestedIndent = await nestedRow
-    .locator(".colNameInner")
+    .locator(".colNameTree")
     .evaluate((el) => parseInt(window.getComputedStyle(el).paddingLeft, 10) || 0);
   const rootIndent = await page
     .locator('.row[data-kind="dir"]', { hasText: "archive/" })
-    .locator(".colNameInner")
+    .locator(".colNameTree")
     .evaluate((el) => parseInt(window.getComputedStyle(el).paddingLeft, 10) || 0);
   expect(nestedIndent).toBeGreaterThan(rootIndent);
 });
