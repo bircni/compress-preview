@@ -209,8 +209,14 @@
     .treeTable tbody td:not(.colActions) {
       box-shadow: inset -1px 0 0 var(--section-border);
     }
+    .treeTable tbody tr.row.is-selected {
+      background: var(--list-active);
+    }
     .treeTable tbody tr.row:hover {
       background: var(--list-hover);
+    }
+    .treeTable tbody tr.row.is-selected:hover {
+      background: var(--list-active);
     }
     .colHeader {
       appearance: none;
@@ -240,7 +246,31 @@
       text-align: right;
     }
     .treeTable thead .colName .colHeader {
-      padding-left: 38px;
+      padding-left: 58px;
+    }
+    .headerCheck,
+    .rowCheck {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      flex: none;
+      accent-color: var(--accent);
+    }
+    .headerCheck {
+      position: absolute;
+      left: 4px;
+      top: 3px;
+      z-index: 3;
+    }
+    .rowCheck {
+      margin-right: 4px;
+    }
+    .colNameTree {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      flex: 1 1 auto;
+      height: var(--row-height);
     }
     .treeTable thead .colSize,
     .treeTable thead .colCompressed,
@@ -473,6 +503,7 @@
           <button id="expandAllBtn" type="button" style="display:none;">Expand all</button>
           <button id="collapseAllBtn" type="button" style="display:none;">Collapse all</button>
           <button id="retryBtn" type="button" style="display:none;">Retry</button>
+          <button id="extractSelectedBtn" type="button" style="display:none;" disabled>Extract selected</button>
           <button id="extractAllBtn" class="buttonPrimary" type="button" style="display:none;">Extract all</button>
         </div>
       </div>
@@ -506,6 +537,7 @@
           <tr class="treeHeader" id="treeHeader">
             <th class="colName" scope="col" data-col="name">
               <div class="colHeaderShell">
+                <input id="selectAllCheck" class="headerCheck" type="checkbox" aria-label="Select all visible entries">
                 <button class="colHeader" type="button" data-sort="path">Name<span class="sortMark"></span></button>
                 <span class="colResizeHandle" data-col-key="name" role="separator" aria-orientation="vertical" aria-label="Resize Name column"></span>
               </div>
@@ -561,6 +593,8 @@
     var loadingEl = document.getElementById('loading');
     var partialEl = document.getElementById('partial');
     var extractAllBtn = document.getElementById('extractAllBtn');
+    var extractSelectedBtn = document.getElementById('extractSelectedBtn');
+    var selectAllCheck = document.getElementById('selectAllCheck');
     var expandAllBtn = document.getElementById('expandAllBtn');
     var collapseAllBtn = document.getElementById('collapseAllBtn');
     var retryBtn = document.getElementById('retryBtn');
@@ -575,6 +609,9 @@
     var allEntries = [];
     var rootNodes = [];
     var collapsedPaths = {};
+    var selectedPaths = {};
+    var lastAnchorIndex = -1;
+    var visibleRows = [];
     var activeFilter = 'all';
     var searchQuery = '';
     var activeSort = 'pathAsc';
@@ -1024,20 +1061,36 @@
       return '<span class="rowIcon codicon ' + fileCodiconClass(entry) + '" aria-hidden="true"></span>';
     }
 
-    function renderNodeRow(nodeState, level, treeState, counters) {
+    function selectedPathList() {
+      return Object.keys(selectedPaths).filter(function(entryPath) { return selectedPaths[entryPath]; });
+    }
+
+    function isPathSelected(entryPath) {
+      return Boolean(selectedPaths[normalizePath(entryPath)]);
+    }
+
+    function setPathSelected(entryPath, selected) {
+      var key = normalizePath(entryPath);
+      if (!key) return;
+      if (selected) selectedPaths[key] = true;
+      else delete selectedPaths[key];
+    }
+
+    function pruneSelection() {
+      var present = {};
+      allEntries.forEach(function(entry) {
+        present[normalizePath(entry.path)] = true;
+      });
+      Object.keys(selectedPaths).forEach(function(key) {
+        if (!present[key]) delete selectedPaths[key];
+      });
+    }
+
+    function collectVisibleRows(nodeState, level, treeState, rows, counters) {
       var node = nodeState.node;
-      var key = node.key;
       var isFolder = node.entry.isDirectory;
       var hasChildren = nodeState.children.length > 0;
-      var isCollapsed = isFolder && !nodeState.forcedOpen && !treeState.filtered && collapsedPaths[key] === true;
-      var actions = '';
-      if (!isFolder) {
-        actions += '<button class="rowAction" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Open ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Open</button>';
-      }
-      actions += '<button class="rowAction" type="button" data-action="copy" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Copy path for ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Copy path</button>';
-      if (!node.synthetic) {
-        actions += '<button class="rowAction" type="button" data-action="extract" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Extract ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Extract</button>';
-      }
+      var isCollapsed = isFolder && !nodeState.forcedOpen && !treeState.filtered && collapsedPaths[node.key] === true;
 
       counters.total += 1;
       if (!node.synthetic) {
@@ -1051,9 +1104,38 @@
         }
       }
 
-      var indent = level * 16;
+      rows.push({
+        nodeState: nodeState,
+        node: node,
+        level: level,
+        isFolder: isFolder,
+        hasChildren: hasChildren,
+        isCollapsed: isCollapsed
+      });
+
+      if (!isCollapsed) {
+        nodeState.children.forEach(function(child) {
+          collectVisibleRows(child, level + 1, treeState, rows, counters);
+        });
+      }
+    }
+
+    function renderNodeRow(row, index) {
+      var node = row.node;
+      var isFolder = row.isFolder;
+      var isCollapsed = row.isCollapsed;
+      var actions = '';
+      if (!isFolder) {
+        actions += '<button class="rowAction" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Open ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Open</button>';
+      }
+      actions += '<button class="rowAction" type="button" data-action="copy" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Copy path for ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Copy path</button>';
+      if (!node.synthetic) {
+        actions += '<button class="rowAction" type="button" data-action="extract" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Extract ' + escapeHtml(node.entry.name || node.entry.path || '') + '">Extract</button>';
+      }
+
+      var indent = row.level * 16;
       var toggleClass = isCollapsed ? 'codicon-chevron-right' : 'codicon-chevron-down';
-      var twistieMarkup = hasChildren || isFolder
+      var twistieMarkup = row.hasChildren || isFolder
         ? '<button class="rowToggle codicon ' + toggleClass + '" type="button" data-action="toggle" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Toggle folder ' + escapeHtml(node.entry.name || node.entry.path || '') + '" aria-expanded="' + (!isCollapsed) + '"></button>'
         : '<span class="rowTwistieSpacer" aria-hidden="true"></span>';
 
@@ -1064,15 +1146,20 @@
         ? '<span class="rowName">' + displayName + '</span>'
         : '<button class="rowNameButton" type="button" data-action="open" data-path="' + escapeHtml(node.entry.path) + '" aria-label="Open ' + escapeHtml(node.entry.name || node.entry.path || '') + '">' + displayName + '</button>';
       var fullPath = normalizePath(node.entry.path || node.entry.name || '');
+      var selected = isPathSelected(node.entry.path);
+      var checkbox = '<input class="rowCheck" type="checkbox" data-action="select" data-path="' + escapeHtml(node.entry.path) + '" data-index="' + index + '" aria-label="Select ' + escapeHtml(node.entry.name || node.entry.path || '') + '"' + (selected ? ' checked' : '') + '>';
 
-      var html = ''
-        + '<tr class="row" data-kind="' + (isFolder ? 'dir' : 'file') + '" title="' + escapeHtml(fullPath) + '">'
+      return ''
+        + '<tr class="row' + (selected ? ' is-selected' : '') + '" data-kind="' + (isFolder ? 'dir' : 'file') + '" data-path="' + escapeHtml(node.entry.path) + '" data-index="' + index + '" title="' + escapeHtml(fullPath) + '">'
         + '<td class="colName" data-col="name">'
-        + '<div class="colNameInner" style="padding-left:' + indent + 'px">'
+        + '<div class="colNameInner">'
+        + checkbox
+        + '<div class="colNameTree" style="padding-left:' + indent + 'px">'
         + twistieMarkup
         + rowIconMarkup(node.entry, !isCollapsed)
         + '<div class="rowLabel">'
         + nameMarkup
+        + '</div>'
         + '</div>'
         + '</div>'
         + '</td>'
@@ -1082,13 +1169,6 @@
         + '<td class="colModified" data-col="modified">' + escapeHtml(modifiedCellText(node)) + '</td>'
         + '<td class="colActions" data-col="actions">' + actions + '</td>'
         + '</tr>';
-
-      if (!isCollapsed) {
-        nodeState.children.forEach(function(child) {
-          html += renderNodeRow(child, level + 1, treeState, counters);
-        });
-      }
-      return html;
     }
 
     function renderVisibleTree() {
@@ -1102,8 +1182,12 @@
         totalSize: 0,
         totalCompressed: 0
       };
-      var html = visibleTree.map(function(nodeState) {
-        return renderNodeRow(nodeState, 0, treeState, counters);
+      visibleRows = [];
+      visibleTree.forEach(function(nodeState) {
+        collectVisibleRows(nodeState, 0, treeState, visibleRows, counters);
+      });
+      var html = visibleRows.map(function(row, index) {
+        return renderNodeRow(row, index);
       }).join('');
       return {
         html: html,
@@ -1184,12 +1268,53 @@
       partialEl.textContent = kind + (targetPath ? ': ' + targetPath : '');
     }
 
+    function updateExtractSelectedButton() {
+      var count = selectedPathList().length;
+      if (!extractSelectedBtn) return;
+      extractSelectedBtn.style.display = allEntries.length ? 'inline-flex' : 'none';
+      extractSelectedBtn.disabled = count === 0;
+      extractSelectedBtn.textContent = count ? ('Extract selected (' + count + ')') : 'Extract selected';
+    }
+
+    function updateSelectAllCheck() {
+      if (!selectAllCheck) return;
+      var selectedCount = 0;
+      visibleRows.forEach(function(row) {
+        if (isPathSelected(row.node.entry.path)) selectedCount += 1;
+      });
+      selectAllCheck.checked = visibleRows.length > 0 && selectedCount === visibleRows.length;
+      selectAllCheck.indeterminate = selectedCount > 0 && selectedCount < visibleRows.length;
+    }
+
+    function handleSelectClick(event, targetPath, index) {
+      if (event.shiftKey && lastAnchorIndex >= 0 && visibleRows.length) {
+        var start = Math.min(lastAnchorIndex, index);
+        var end = Math.max(lastAnchorIndex, index);
+        for (var i = start; i <= end; i += 1) {
+          var row = visibleRows[i];
+          if (row) setPathSelected(row.node.entry.path, true);
+        }
+      } else {
+        setPathSelected(targetPath, !isPathSelected(targetPath));
+        lastAnchorIndex = index;
+      }
+      renderEntries();
+    }
+
     function bindRowActions() {
       treeEl.querySelectorAll('[data-action]').forEach(function(button) {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(event) {
           var action = button.getAttribute('data-action');
           var targetPath = button.getAttribute('data-path');
           if (!action || !targetPath) return;
+          if (action === 'select') {
+            event.preventDefault();
+            event.stopPropagation();
+            var index = Number(button.getAttribute('data-index'));
+            if (Number.isNaN(index)) index = -1;
+            handleSelectClick(event, targetPath, index);
+            return;
+          }
           if (action === 'toggle') {
             var key = normalizePath(targetPath);
             collapsedPaths[key] = !collapsedPaths[key];
@@ -1251,6 +1376,8 @@
       updateSummary(rendered.counters);
       updateFolderButtons();
       updateSortHeaders();
+      updateSelectAllCheck();
+      updateExtractSelectedButton();
       layoutTableColumns();
       if (extractAllBtn) extractAllBtn.style.display = allEntries.length ? 'inline-flex' : 'none';
       setStatus(allEntries.length ? 'Archive ready' : 'Archive is empty');
@@ -1258,6 +1385,7 @@
 
     function setEntries(entries, isPartial, message) {
       allEntries = entries || [];
+      pruneSelection();
       rootNodes = buildTree(allEntries);
       rootNodes.forEach(computeNodeStats);
       renderEntries();
@@ -1280,6 +1408,10 @@
       if (treeTableEl) treeTableEl.style.display = 'none';
       if (emptyEl) emptyEl.style.display = 'none';
       if (extractAllBtn) extractAllBtn.style.display = 'none';
+      if (extractSelectedBtn) extractSelectedBtn.style.display = 'none';
+      selectedPaths = {};
+      lastAnchorIndex = -1;
+      visibleRows = [];
       updateFolderButtons();
       if (errorEl) {
         errorEl.style.display = 'block';
@@ -1323,6 +1455,17 @@
       if (collapseAllBtn) {
         collapseAllBtn.addEventListener('click', function() {
           setAllFoldersCollapsed(true);
+          renderEntries();
+        });
+      }
+      if (selectAllCheck) {
+        selectAllCheck.addEventListener('click', function(event) {
+          event.stopPropagation();
+          var next = selectAllCheck.checked;
+          visibleRows.forEach(function(row) {
+            setPathSelected(row.node.entry.path, next);
+          });
+          lastAnchorIndex = next && visibleRows.length ? 0 : -1;
           renderEntries();
         });
       }
@@ -1392,6 +1535,13 @@
     });
 
     if (retryBtn) retryBtn.addEventListener('click', function() { if (vscode) vscode.postMessage({ type: 'retryLoad' }); });
+    if (extractSelectedBtn) {
+      extractSelectedBtn.addEventListener('click', function() {
+        var paths = selectedPathList();
+        if (!vscode || !paths.length) return;
+        vscode.postMessage({ type: 'extractSelected', paths: paths });
+      });
+    }
     if (extractAllBtn) extractAllBtn.addEventListener('click', function() { if (vscode) vscode.postMessage({ type: 'extractAll' }); });
     if (vscode && !hasInitialData) {
       vscode.postMessage({ type: 'getEntries' });
