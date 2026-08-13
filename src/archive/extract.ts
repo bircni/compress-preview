@@ -39,7 +39,7 @@ export function extractAllTargetDir(archivePath: string): string {
   return path.join(dir, base);
 }
 
-export function normalizeArchiveEntryPath(entryPath: string): string {
+function normalizeArchiveEntryPath(entryPath: string): string {
   return entryPath.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
 }
 
