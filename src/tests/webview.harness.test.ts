@@ -536,8 +536,10 @@ describe("webview harness", () => {
       );
     };
 
+    const focusedPath = () => document.querySelector("tr.row.is-focused")?.dataset.path;
+
     press("ArrowDown");
-    expect(document.querySelector("tr.row.is-focused")?.getAttribute("data-path")).toBe("docs/");
+    expect(focusedPath()).toBe("docs/");
 
     press("ArrowLeft");
     expect(visibleNames(document)).not.toContain("inside.txt");
@@ -546,12 +548,10 @@ describe("webview harness", () => {
     expect(visibleNames(document)).toContain("inside.txt");
 
     press("End");
-    expect(document.querySelector("tr.row.is-focused")?.getAttribute("data-path")).toBe(
-      "other.txt",
-    );
+    expect(focusedPath()).toBe("other.txt");
 
     press("Home");
-    expect(document.querySelector("tr.row.is-focused")?.getAttribute("data-path")).toBe("docs/");
+    expect(focusedPath()).toBe("docs/");
 
     press("ArrowDown");
     press("Enter");
