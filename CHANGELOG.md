@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/bircni/compress-preview/compare/v0.6.1..v0.7.0) - 2026-08-13
+
+### Added
+
+- **(archive)** increase list timeout on retry and report loaded count - ([339ab43](https://github.com/bircni/compress-preview/commit/339ab4305a6e63ddf5019821170b244c942c3eca))
+- **(archive)** preview 7z, xz, bzip2, and zstd archives - ([7d6cd2f](https://github.com/bircni/compress-preview/commit/7d6cd2f380ac8b806c68062044a32f0b122ed2d4))
+- **(extract)** extract selected paths in a single scan - ([b37cc21](https://github.com/bircni/compress-preview/commit/b37cc21f17496b6687ef186605aee4de0128449f))
+- **(preview)** bound large text previews while streaming - ([40b3473](https://github.com/bircni/compress-preview/commit/40b347371d53528155852a28a6649e49ab2305b6))
+- **(webview)** multi-select rows and extract the selection - ([149130b](https://github.com/bircni/compress-preview/commit/149130bfd5b46532cc60afb0aa084af7a44e7e84))
+- **(webview)** virtualize the archive table - ([558c739](https://github.com/bircni/compress-preview/commit/558c739f7bd803ec52644864ebf8e60138a870a5))
+- **(webview)** add keyboard navigation for the archive tree - ([e367daf](https://github.com/bircni/compress-preview/commit/e367daf9f3e522695f45af0445412d33820c1ded))
+
+### Fixed
+
+- **(extract)** merge or replace when extract-all hits an existing folder - ([5102ccd](https://github.com/bircni/compress-preview/commit/5102ccd87d538e8d184fafc447a3a0e50da12b32))
+- **(extract)** update extract-all e2e for merge and replace - ([6a02c99](https://github.com/bircni/compress-preview/commit/6a02c99e7b7ea4413737172ebded4e4e54c6eb1f))
+- **(webview)** classify text vs binary once in the extension host - ([00fc223](https://github.com/bircni/compress-preview/commit/00fc223d06e8117b6179fda0673456cc9a8e4b3b))
+- **(webview)** size columns after the table is visible - ([dab6788](https://github.com/bircni/compress-preview/commit/dab6788eeb34b5511ced7fd3378634c64e4555d5))
+
+### Internal
+
+- **(deps)** update development dependencies ([#17](https://github.com/bircni/compress-preview/issues/17)) - ([d6fbf13](https://github.com/bircni/compress-preview/commit/d6fbf13bad8623e0f872ca5063e8096e31f90d9a))
+- **(lint)** avoid object default params and dataset accessors - ([0006f98](https://github.com/bircni/compress-preview/commit/0006f9876607fc31d3c7cf5ca9c986935467a235))
+- **(lint)** use dataset.path in keyboard navigation tests - ([b0a80fa](https://github.com/bircni/compress-preview/commit/b0a80fae944fb13ec20dd0f622dd2d9c3bc34417))
+- keep list timeout and path helpers unexported - ([472ed89](https://github.com/bircni/compress-preview/commit/472ed890ee23f8f20d5b41ba9f6b9b33da23acac))
+
 ## [0.6.1](https://github.com/bircni/compress-preview/compare/v0.6.0..v0.6.1) - 2026-08-02
 
 ### Fixed
