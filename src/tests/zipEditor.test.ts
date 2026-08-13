@@ -34,6 +34,7 @@ type ProviderHarnessOptions = {
   shouldReuseTempPreview?: boolean;
   showOpenDialogResult?: { fsPath: string }[] | undefined;
   showWarningMessageResult?: string | undefined;
+  showWarningMessageResults?: string[];
 };
 
 async function createProviderHarness(options: ProviderHarnessOptions = {}) {
@@ -59,7 +60,13 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     : vi.fn().mockResolvedValue({ uri: { scheme: "compress-preview" } });
   const createOutputChannel = vi.fn();
   const showOpenDialog = vi.fn().mockResolvedValue(options.showOpenDialogResult);
-  const showWarningMessage = vi.fn().mockResolvedValue(options.showWarningMessageResult);
+  const warningQueue = [...(options.showWarningMessageResults ?? [])];
+  const showWarningMessage = vi.fn().mockImplementation(async () => {
+    if (warningQueue.length > 0) {
+      return warningQueue.shift();
+    }
+    return options.showWarningMessageResult;
+  });
   const postMessage = vi.fn().mockResolvedValue(true);
   const reveal = vi.fn();
   const listEntries = options.listEntriesError
@@ -556,21 +563,46 @@ describe("ZipPreviewEditorProvider", () => {
     );
   });
 
-  it("overwrites the default extract-all target after confirmation", async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-overwrite-"));
+  it("merges into the default extract-all target after confirmation", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-merge-"));
     const archivePath = path.join(tempDir, "sample.zip");
     fs.writeFileSync(archivePath, "zip");
     fs.mkdirSync(path.join(tempDir, "sample"), { recursive: true });
     const harness = await createProviderHarness({
       archivePath,
-      showWarningMessageResult: "Overwrite",
+      showWarningMessageResult: "Merge",
     });
     await Promise.resolve();
 
     await harness.messageHandler?.({ type: "extractAll" });
 
     expect(harness.extractAll).toHaveBeenCalledWith(archivePath, path.join(tempDir, "sample"), {
-      overwrite: true,
+      conflictMode: "merge",
+    });
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("replaces the default extract-all target after a second confirmation", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-overwrite-"));
+    const archivePath = path.join(tempDir, "sample.zip");
+    fs.writeFileSync(archivePath, "zip");
+    fs.mkdirSync(path.join(tempDir, "sample"), { recursive: true });
+    const harness = await createProviderHarness({
+      archivePath,
+      showWarningMessageResults: ["Replace folder", "Replace folder"],
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "extractAll" });
+
+    expect(harness.showWarningMessage).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("will delete all of its current contents"),
+      "Replace folder",
+      "Cancel",
+    );
+    expect(harness.extractAll).toHaveBeenCalledWith(archivePath, path.join(tempDir, "sample"), {
+      conflictMode: "replace",
     });
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
@@ -585,7 +617,7 @@ describe("ZipPreviewEditorProvider", () => {
     fs.mkdirSync(path.join(parentDir, "sample"), { recursive: true });
     const harness = await createProviderHarness({
       archivePath,
-      showWarningMessageResult: "Choose other folder",
+      showWarningMessageResults: ["Choose other folder", "Merge"],
       showOpenDialogResult: [{ fsPath: parentDir }],
     });
     await Promise.resolve();
@@ -593,7 +625,7 @@ describe("ZipPreviewEditorProvider", () => {
     await harness.messageHandler?.({ type: "extractAll" });
 
     expect(harness.extractAll).toHaveBeenCalledWith(archivePath, path.join(parentDir, "sample"), {
-      overwrite: true,
+      conflictMode: "merge",
     });
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
@@ -621,7 +653,7 @@ describe("ZipPreviewEditorProvider", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it("reports extract-all cancellation when overwrite is declined", async () => {
+  it("reports extract-all cancellation when the conflict dialog is declined", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-cancel-"));
     const archivePath = path.join(tempDir, "sample.zip");
     fs.writeFileSync(archivePath, "zip");
@@ -629,6 +661,28 @@ describe("ZipPreviewEditorProvider", () => {
     const harness = await createProviderHarness({
       archivePath,
       showWarningMessageResult: "Cancel",
+    });
+    await Promise.resolve();
+
+    await harness.messageHandler?.({ type: "extractAll" });
+
+    expect(harness.extractAll).not.toHaveBeenCalled();
+    expect(harness.postMessage).toHaveBeenCalledWith({
+      type: "extractResult",
+      success: false,
+      error: "Cancelled",
+    });
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("cancels replace when the destructive confirmation is declined", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "compress-preview-replace-cancel-"));
+    const archivePath = path.join(tempDir, "sample.zip");
+    fs.writeFileSync(archivePath, "zip");
+    fs.mkdirSync(path.join(tempDir, "sample"), { recursive: true });
+    const harness = await createProviderHarness({
+      archivePath,
+      showWarningMessageResults: ["Replace folder", "Cancel"],
     });
     await Promise.resolve();
 

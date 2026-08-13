@@ -382,44 +382,74 @@ export function createZipEditorController(deps: ZipEditorControllerDeps): {
         const targetDir = deps.extractAllTargetDir(deps.zipPath);
         const archiveFolderName = path.basename(targetDir);
         let extractionTarget = targetDir;
-        let overwrite = false;
-        if (deps.existsSync(targetDir)) {
+
+        const postCancelled = async (): Promise<void> => {
+          await postMessage({
+            type: "extractResult",
+            success: false,
+            error: "Cancelled",
+          });
+        };
+
+        const resolveConflictMode = async (
+          folderName: string,
+        ): Promise<"merge" | "replace" | "choose" | "cancelled"> => {
           const choice = await deps.showWarningMessage(
-            `Folder "${archiveFolderName}" already exists.`,
-            "Overwrite",
-            "Cancel",
+            `Folder "${folderName}" already exists.`,
+            "Merge",
+            "Replace folder",
             "Choose other folder",
+            "Cancel",
           );
-          if (choice === "Cancel" || !choice) {
-            await postMessage({
-              type: "extractResult",
-              success: false,
-              error: "Cancelled",
-            });
-            return;
+          if (choice === "Merge") {
+            return "merge";
+          }
+          if (choice === "Replace folder") {
+            const confirm = await deps.showWarningMessage(
+              `Replacing folder "${folderName}" will delete all of its current contents.`,
+              "Replace folder",
+              "Cancel",
+            );
+            return confirm === "Replace folder" ? "replace" : "cancelled";
           }
           if (choice === "Choose other folder") {
-            const chosen = await deps.showOpenDialog({
-              canSelectFolders: true,
-              canSelectMany: false,
-              title: "Select parent folder for extraction",
-            });
-            const folder = chosen?.[0]?.fsPath;
-            if (!folder) {
-              await postMessage({
-                type: "extractResult",
-                success: false,
-                error: "Cancelled",
-              });
-              return;
-            }
-            extractionTarget = path.join(folder, archiveFolderName);
-            overwrite = deps.existsSync(extractionTarget);
-          } else {
-            overwrite = true;
+            return "choose";
           }
+          return "cancelled";
+        };
+
+        let conflictMode: "merge" | "replace" | undefined;
+        for (;;) {
+          if (!deps.existsSync(extractionTarget)) {
+            break;
+          }
+          const decision = await resolveConflictMode(path.basename(extractionTarget));
+          if (decision === "cancelled") {
+            await postCancelled();
+            return;
+          }
+          if (decision === "merge" || decision === "replace") {
+            conflictMode = decision;
+            break;
+          }
+          const chosen = await deps.showOpenDialog({
+            canSelectFolders: true,
+            canSelectMany: false,
+            title: "Select parent folder for extraction",
+          });
+          const folder = chosen?.[0]?.fsPath;
+          if (!folder) {
+            await postCancelled();
+            return;
+          }
+          extractionTarget = path.join(folder, archiveFolderName);
         }
-        await deps.extractAll(deps.zipPath, extractionTarget, { overwrite });
+
+        await deps.extractAll(
+          deps.zipPath,
+          extractionTarget,
+          conflictMode === undefined ? { overwrite: false } : { conflictMode },
+        );
         await postMessage({
           type: "extractResult",
           success: true,
