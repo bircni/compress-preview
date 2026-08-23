@@ -108,7 +108,7 @@
     "@types/node": "26.2.0",
     "@types/tar-stream": "3.1.4",
     "@types/unbzip2-stream": "^1.4.3",
-    "@types/vscode": "1.105.0",
+    "@types/vscode": "1.134.0",
     "@types/yauzl": "3.4.0",
     "@types/yazl": "3.3.1",
     "@vitest/coverage-v8": "^4.1.11",
