@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import tar, { type Headers as TarHeaders } from "tar-stream";
+import tar, { type Header as TarHeader } from "tar-stream";
 import * as vscode from "vscode";
 import zlib from "node:zlib";
 
@@ -18,7 +18,7 @@ function previewUri(archiveUri: vscode.Uri, entryPath: string): vscode.Uri {
 
 type TarFixtureEntry = {
   name: string;
-  type?: TarHeaders["type"];
+  type?: TarHeader["type"];
   content?: string;
 };
 
@@ -30,15 +30,19 @@ async function createTarFixture(
   await new Promise<void>((resolve, reject) => {
     const pack = tar.pack();
     const output = fs.createWriteStream(targetPath);
-    const target = options.gzip ? pack.pipe(zlib.createGzip()) : pack;
 
     output.on("close", resolve);
     output.on("error", reject);
     pack.on("error", reject);
-    target.pipe(output);
+    if (options.gzip) {
+      pack.pipe(zlib.createGzip()).pipe(output);
+    } else {
+      pack.pipe(output);
+    }
 
     for (const entry of entries) {
-      pack.entry({ name: entry.name, type: entry.type }, entry.content ?? "", (error) => {
+      const header = { name: entry.name, ...(entry.type !== undefined && { type: entry.type }) };
+      pack.entry(header, entry.content ?? "", (error) => {
         if (error) {
           reject(error);
         }

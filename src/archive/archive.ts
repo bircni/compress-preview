@@ -47,20 +47,20 @@ function createArchiveEntry(
   };
 }
 
-function createTarEntry(header: tar.Headers): ArchiveEntry {
+function createTarEntry(header: tar.Header): ArchiveEntry {
   const normalizedPath = header.name.replaceAll("\\", "/");
   const isDirectory = header.type === "directory" || normalizedPath.endsWith("/");
   return createArchiveEntry(
     isDirectory ? `${normalizedPath.replace(/\/$/, "")}/` : normalizedPath,
     {
       isDirectory,
-      ...(!isDirectory && header.size !== undefined && { size: header.size }),
+      ...(!isDirectory && { size: header.size }),
       ...(header.mtime instanceof Date && { mtime: header.mtime }),
     },
   );
 }
 
-function isTarDirectory(header: tar.Headers): boolean {
+function isTarDirectory(header: tar.Header): boolean {
   return header.type === "directory" || header.name.endsWith("/");
 }
 
@@ -210,7 +210,7 @@ function listTarEntries(
       });
     }, timeoutMs);
 
-    extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
+    extract.on("entry", (header, stream, next) => {
       if (resolved) {
         stream.resume();
         return;
@@ -392,7 +392,7 @@ function openTarEntryReadStream(
       reject(error instanceof Error ? error : new Error(String(error)));
     };
 
-    extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
+    extract.on("entry", (header, stream, next) => {
       const normalizedPath = header.name.replaceAll("\\", "/").replace(/\/$/, "");
       if (
         normalizedPath !== wantPath &&

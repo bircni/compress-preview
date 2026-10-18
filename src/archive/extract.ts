@@ -114,7 +114,7 @@ function createTarInputStream(
   };
 }
 
-function isUnsupportedTarEntryType(header: tar.Headers): boolean {
+function isUnsupportedTarEntryType(header: tar.Header): boolean {
   return header.type === "symlink" || header.type === "link";
 }
 
@@ -218,7 +218,7 @@ function extractTarEntry(
       reject(error instanceof Error ? error : new Error(String(error)));
     };
 
-    extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
+    extract.on("entry", (header, stream, next) => {
       const normalizedPath = header.name.replaceAll("\\", "/").replace(/\/$/, "");
       if (normalizedPath !== wantPath && header.name !== entryPath) {
         stream.resume();
@@ -237,9 +237,7 @@ function extractTarEntry(
       }
       if (isUnsupportedTarEntryType(header)) {
         stream.resume();
-        finishWithError(
-          new Error(`Unsupported tar entry type for extraction: ${String(header.type)}`),
-        );
+        finishWithError(new Error(`Unsupported tar entry type for extraction: ${header.type}`));
         return;
       }
       fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -574,7 +572,7 @@ function extractAllTar(
       reject(error instanceof Error ? error : new Error("Failed to extract archive"));
     };
 
-    extract.on("entry", (header: tar.Headers, stream: NodeJS.ReadableStream, next: () => void) => {
+    extract.on("entry", (header, stream, next) => {
       if (!includeEntry(header.name)) {
         stream.resume();
         stream.on("end", () => {
@@ -601,9 +599,7 @@ function extractAllTar(
       }
       if (isUnsupportedTarEntryType(header)) {
         stream.resume();
-        finishWithError(
-          new Error(`Unsupported tar entry type for extraction: ${String(header.type)}`),
-        );
+        finishWithError(new Error(`Unsupported tar entry type for extraction: ${header.type}`));
         return;
       }
 
