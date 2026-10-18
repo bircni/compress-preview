@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1](https://github.com/bircni/compress-preview/compare/v0.7.0..v0.7.1) - 2026-10-18
+
+### Fixed
+
+- **(editor)** prompt to open large text previews of unknown size ([#23](https://github.com/bircni/compress-preview/issues/23)) - ([9cd97e7](https://github.com/bircni/compress-preview/commit/9cd97e736f2473a9665a641e13bc30d286f2cfbb))
+
+### Internal
+
+- **(deps)** update dev dependencies ([#20](https://github.com/bircni/compress-preview/issues/20)) - ([6f576af](https://github.com/bircni/compress-preview/commit/6f576af25eb4cfb783759342d6fb37faa537c9b8))
+- **(deps)** update dependencies to latest ([#24](https://github.com/bircni/compress-preview/issues/24)) - ([49d9c4b](https://github.com/bircni/compress-preview/commit/49d9c4bbdde3d0359769e0fc60ba96e641e18a3c))
+
 ## [0.7.0](https://github.com/bircni/compress-preview/compare/v0.6.1..v0.7.0) - 2026-08-13
 
 ### Added
