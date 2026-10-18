@@ -51,4 +51,11 @@ describe("textPreview", () => {
     expect(isTextPreviewTooLargeError(named)).toBe(true);
     expect(isTextPreviewTooLargeError(new Error("open failed"))).toBe(false);
   });
+
+  it("recognizes oversized preview errors wrapped by openTextDocument", () => {
+    const wrapped = new Error(
+      "cannot open compress-preview://preview/access.log?zip=%2Ftmp%2Faccess.log.gz. Detail: Text preview exceeds the configured limit of 2097152 bytes. Extract the file or open it once with an override.",
+    );
+    expect(isTextPreviewTooLargeError(wrapped)).toBe(true);
+  });
 });

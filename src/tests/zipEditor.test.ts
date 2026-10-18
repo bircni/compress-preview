@@ -496,10 +496,10 @@ describe("ZipPreviewEditorProvider", () => {
   });
 
   it("prompts after a streamed text preview exceeds the limit", async () => {
+    // Shape of the error openTextDocument rejects with when the content provider throws.
     const oversized = new Error(
-      "Text preview exceeds the configured limit of 1024 bytes. Extract the file or open it once with an override.",
+      "cannot open compress-preview://preview/docs/readme.txt. Detail: Text preview exceeds the configured limit of 1024 bytes. Extract the file or open it once with an override.",
     );
-    oversized.name = "TextPreviewTooLargeError";
     const harness = await createProviderHarness({
       maxTextPreviewBytes: 1024,
       showWarningMessageResult: "Cancel",

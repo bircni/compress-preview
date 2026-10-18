@@ -3,13 +3,15 @@ import { Readable } from "node:stream";
 export const DEFAULT_MAX_TEXT_PREVIEW_BYTES = 2 * 1024 * 1024;
 export const MAX_TEXT_PREVIEW_BYTES_CAP = 100 * 1024 * 1024;
 
+const TOO_LARGE_MESSAGE_PREFIX = "Text preview exceeds the configured limit";
+
 export class TextPreviewTooLargeError extends Error {
   readonly limitBytes: number;
   readonly receivedBytes: number;
 
   constructor(limitBytes: number, receivedBytes: number) {
     super(
-      `Text preview exceeds the configured limit of ${limitBytes} bytes. Extract the file or open it once with an override.`,
+      `${TOO_LARGE_MESSAGE_PREFIX} of ${limitBytes} bytes. Extract the file or open it once with an override.`,
     );
     this.name = "TextPreviewTooLargeError";
     this.limitBytes = limitBytes;
@@ -21,10 +23,11 @@ export function isTextPreviewTooLargeError(error: unknown): boolean {
   if (error instanceof TextPreviewTooLargeError) {
     return true;
   }
+  // openTextDocument rethrows content provider errors as
+  // `cannot open <uri>. Detail: <message>`, so the marker is not at the start.
   return (
     error instanceof Error &&
-    (error.name === "TextPreviewTooLargeError" ||
-      error.message.startsWith("Text preview exceeds the configured limit"))
+    (error.name === "TextPreviewTooLargeError" || error.message.includes(TOO_LARGE_MESSAGE_PREFIX))
   );
 }
 

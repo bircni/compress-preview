@@ -226,6 +226,32 @@ describe("Compress Preview extension host", () => {
     assert.deepStrictEqual(state?.sentMessages.at(-1), { type: "openResult", success: true });
   });
 
+  it("offers to open an oversized text entry of unknown size once", async () => {
+    const config = vscode.workspace.getConfiguration("compress-preview");
+    const gzipPath = path.join(os.tmpdir(), "compress-preview-e2e-large.log.gz");
+    const content = "x".repeat(4096);
+    fs.rmSync(gzipPath, { force: true });
+    createGzipFixture(gzipPath, content);
+    await config.update("maxTextPreviewBytes", 1024, vscode.ConfigurationTarget.Global);
+
+    try {
+      await openCustomEditorFor(vscode.Uri.file(gzipPath));
+      await setEditorOverrides({ nextWarningChoice: "Open anyway" });
+      await clearEditorMessages();
+
+      await postEditorMessage({ type: "openEntry", path: "compress-preview-e2e-large.log" });
+
+      await waitFor(async () => {
+        const state = await getEditorState();
+        assert.deepStrictEqual(state?.sentMessages.at(-1), { type: "openResult", success: true });
+      });
+      assert.strictEqual(vscode.window.activeTextEditor?.document.getText(), content);
+    } finally {
+      await config.update("maxTextPreviewBytes", undefined, vscode.ConfigurationTarget.Global);
+      fs.rmSync(gzipPath, { force: true });
+    }
+  });
+
   it("labels text preview tabs with the entry file name", async () => {
     const archivePath = path.join(os.tmpdir(), "compress-preview-e2e-label.tar");
     fs.rmSync(archivePath, { force: true });
