@@ -53,7 +53,7 @@ const ZIP_BASED_FIXTURES = [
 type TarFixtureEntry = {
   name: string;
   content?: string;
-  type?: tar.Headers["type"];
+  type?: tar.Header["type"];
 };
 
 function createZip(zipPath: string, files: { name: string; content: string }[]): Promise<void> {

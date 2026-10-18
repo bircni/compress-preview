@@ -29,7 +29,7 @@ const FIXTURES_DIR = path.join(process.cwd(), ".fixtures");
 type TarFixtureEntry = {
   name: string;
   content?: string;
-  type?: tar.Headers["type"];
+  type?: tar.Header["type"];
 };
 
 function createZip(zipPath: string, files: { name: string; content: string }[]): Promise<void> {
