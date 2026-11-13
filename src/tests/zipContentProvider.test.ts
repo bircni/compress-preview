@@ -1,6 +1,5 @@
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as zipContentProviderModule from "../editor/zipContentProvider";
 
 function mockPreviewConfig(maxTextPreviewBytes = 2 * 1024 * 1024): void {
   vi.doMock("../editor/compressPreviewConfig", () => ({
@@ -25,14 +24,11 @@ describe("zipContentProvider", () => {
       };
     });
 
-    vi.doMock("vscode", () => ({ Uri: { parse: (value: string) => ({ query: value }) } }), {
-      virtual: true,
-    });
+    vi.doMock("vscode", () => ({ Uri: { parse: (value: string) => ({ query: value }) } }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
     mockPreviewConfig();
 
-    const { ZipContentProvider } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { ZipContentProvider } = await import("../editor/zipContentProvider");
     const provider = new ZipContentProvider();
     const content = await provider.provideTextDocumentContent({
       query: "zip=%2Ftmp%2Farchive.zip&entry=docs%2Freadme.txt",
@@ -54,12 +50,11 @@ describe("zipContentProvider", () => {
       };
     });
 
-    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {} }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
     mockPreviewConfig();
 
-    const { ZipContentProvider } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { ZipContentProvider } = await import("../editor/zipContentProvider");
     const provider = new ZipContentProvider();
     const content = await provider.provideTextDocumentContent({
       query: "zip=%2Ftmp%2Farchive.zip&entry=docs%2Freadme.txt",
@@ -75,19 +70,22 @@ describe("zipContentProvider", () => {
       stream: new PassThrough(),
     });
 
-    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {} }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
     mockPreviewConfig();
 
-    const { ZipContentProvider } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { ZipContentProvider } = await import("../editor/zipContentProvider");
     const provider = new ZipContentProvider();
     const pending = provider.provideTextDocumentContent({
       query: "zip=%2Ftmp%2Farchive.zip",
       path: "/docs/readme.txt",
     } as never);
 
-    const { stream } = (await openEntryReadStream.mock.results[0].value) as { stream: PassThrough };
+    const firstResult = openEntryReadStream.mock.results[0];
+    if (!firstResult) {
+      throw new Error("openEntryReadStream was not called");
+    }
+    const { stream } = (await firstResult.value) as { stream: PassThrough };
     queueMicrotask(() => stream.end("path fallback"));
 
     expect(await pending).toBe("path fallback");
@@ -95,12 +93,11 @@ describe("zipContentProvider", () => {
   });
 
   it("rejects invalid preview URIs", async () => {
-    vi.doMock("vscode", () => ({}), { virtual: true });
+    vi.doMock("vscode", () => ({}));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
     mockPreviewConfig();
 
-    const { ZipContentProvider } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { ZipContentProvider } = await import("../editor/zipContentProvider");
     const provider = new ZipContentProvider();
 
     await expect(
@@ -112,23 +109,19 @@ describe("zipContentProvider", () => {
     const registerTextDocumentContentProvider = vi.fn(() => ({ dispose: vi.fn() }));
     const parse = vi.fn((value: string) => ({ value }));
 
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          registerTextDocumentContentProvider,
-        },
-        Uri: {
-          parse,
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      workspace: {
+        registerTextDocumentContentProvider,
+      },
+      Uri: {
+        parse,
+      },
+    }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
     mockPreviewConfig();
 
     const { registerZipContentProvider, makeZipPreviewUri } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+      await import("../editor/zipContentProvider");
     const context = { subscriptions: [] as unknown[] };
 
     registerZipContentProvider(context as never);
@@ -147,12 +140,11 @@ describe("zipContentProvider", () => {
 
   it("puts the entry name in the URI path so the editor tab is labelled", async () => {
     const parse = vi.fn((value: string) => ({ value }));
-    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
     mockPreviewConfig();
 
-    const { makeZipPreviewUri } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { makeZipPreviewUri } = await import("../editor/zipContentProvider");
 
     const pathOf = (entryPath: string): string => {
       makeZipPreviewUri("/tmp/chart.zip", entryPath);
@@ -171,12 +163,11 @@ describe("zipContentProvider", () => {
 
   it("escapes characters that would otherwise split the preview URI", async () => {
     const parse = vi.fn((value: string) => ({ value }));
-    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
     mockPreviewConfig();
 
-    const { makeZipPreviewUri } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { makeZipPreviewUri } = await import("../editor/zipContentProvider");
 
     makeZipPreviewUri("/tmp/chart.zip", "docs/re#ad?me.yaml");
     const raw = parse.mock.lastCall?.[0] ?? "";
@@ -195,12 +186,11 @@ describe("zipContentProvider", () => {
       };
     });
 
-    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {} }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
     mockPreviewConfig(8);
 
-    const { ZipContentProvider } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { ZipContentProvider } = await import("../editor/zipContentProvider");
     const provider = new ZipContentProvider();
 
     await expect(
@@ -221,12 +211,11 @@ describe("zipContentProvider", () => {
       };
     });
 
-    vi.doMock("vscode", () => ({ workspace: {} }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {} }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream }));
     mockPreviewConfig(8);
 
-    const { ZipContentProvider } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { ZipContentProvider } = await import("../editor/zipContentProvider");
     const provider = new ZipContentProvider();
     const content = await provider.provideTextDocumentContent({
       query: "zip=%2Ftmp%2Farchive.zip&entry=huge.log&allowLarge=1",
@@ -238,12 +227,11 @@ describe("zipContentProvider", () => {
 
   it("encodes the one-time large preview flag on the URI", async () => {
     const parse = vi.fn((value: string) => ({ value }));
-    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }), { virtual: true });
+    vi.doMock("vscode", () => ({ workspace: {}, Uri: { parse } }));
     vi.doMock("../archive/archive", () => ({ openEntryReadStream: vi.fn() }));
     mockPreviewConfig();
 
-    const { makeZipPreviewUri } =
-      (await import("../editor/zipContentProvider")) as typeof zipContentProviderModule;
+    const { makeZipPreviewUri } = await import("../editor/zipContentProvider");
 
     makeZipPreviewUri("/tmp/chart.zip", "huge.log", { allowLarge: true });
     const raw = parse.mock.lastCall?.[0] ?? "";

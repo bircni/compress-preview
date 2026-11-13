@@ -21,7 +21,7 @@ describe("buildArchiveTree", () => {
         isDirectory: true,
       },
     });
-    expect(tree[0].children[0]).toMatchObject({
+    expect(tree[0]?.children[0]).toMatchObject({
       key: "nested/deeper",
       synthetic: true,
       entry: {
@@ -30,7 +30,7 @@ describe("buildArchiveTree", () => {
         isDirectory: true,
       },
     });
-    expect(tree[0].children[0].children[0]).toMatchObject({
+    expect(tree[0]?.children[0]?.children[0]).toMatchObject({
       key: "nested/deeper/file.txt",
       synthetic: false,
       entry: {
@@ -55,8 +55,8 @@ describe("buildArchiveTree", () => {
       },
     ]);
 
-    expect(tree[0].synthetic).toBe(false);
-    expect(tree[0].entry).toMatchObject({
+    expect(tree[0]?.synthetic).toBe(false);
+    expect(tree[0]?.entry).toMatchObject({
       path: "nested/",
       name: "nested",
       isDirectory: true,
@@ -82,8 +82,8 @@ describe("buildArchiveTree", () => {
       },
     ]);
 
-    expect(tree[0].entry.path).toBe("nested/");
-    expect(tree[0].children[0].entry.path).toBe(".\\nested\\file.txt");
+    expect(tree[0]?.entry.path).toBe("nested/");
+    expect(tree[0]?.children[0]?.entry.path).toBe(".\\nested\\file.txt");
   });
 
   it("orders deeper paths after their parents and keeps directories ahead of files with the same base path", () => {
@@ -94,8 +94,8 @@ describe("buildArchiveTree", () => {
     ]);
 
     expect(tree).toHaveLength(1);
-    expect(tree[0].entry.path).toBe("same");
-    expect(tree[0].children[0].entry.path).toBe("same/deeper.txt");
+    expect(tree[0]?.entry.path).toBe("same");
+    expect(tree[0]?.children[0]?.entry.path).toBe("same/deeper.txt");
   });
 
   it("returns an empty tree for an empty entry list", () => {
@@ -110,7 +110,7 @@ describe("buildArchiveTree", () => {
     ]);
 
     expect(tree).toHaveLength(1);
-    expect(tree[0].children).toHaveLength(1);
-    expect(tree[0].children[0].entry.path).toBe("dup/file.txt");
+    expect(tree[0]?.children).toHaveLength(1);
+    expect(tree[0]?.children[0]?.entry.path).toBe("dup/file.txt");
   });
 });

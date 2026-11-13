@@ -1,7 +1,6 @@
 import { Script } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 import { getInitialHtml } from "../webview/content";
-import type * as webviewContentModule from "../webview/content";
 
 function extractInlineScript(html: string): string {
   const matches = html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g).toArray();
@@ -93,8 +92,7 @@ describe("getInitialHtml", () => {
       readFileSync: vi.fn(),
     }));
 
-    const { getInitialHtml: missingTemplateHtml } =
-      (await import("../webview/content")) as typeof webviewContentModule;
+    const { getInitialHtml: missingTemplateHtml } = await import("../webview/content");
 
     expect(() => missingTemplateHtml("vscode-webview:")).toThrow("Missing webview template");
   });

@@ -80,6 +80,7 @@
     "install:cursor:debug": "npm run build && cursor --install-extension dist/extension.vsix --force",
     "uninstall:cursor:debug": "cursor --uninstall-extension bircni.compress-preview",
     "lint": "oxlint --type-aware --deny-warnings",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:fix": "oxlint --type-aware --fix",
     "package": "vsce package --out dist/extension.vsix",
     "compile:e2e": "tsc --project tsconfig.e2e.json",
@@ -92,7 +93,7 @@
     "test:watch": "vitest",
     "release": "tsx scripts/release.ts",
     "coverage:summary": "tsx scripts/write-coverage-summary.ts",
-    "validate": "npm run check-unused && npm run lint && npm run format && npm run check:fixtures && npm run test:coverage && npm run test:e2e && npm run build && npm run audit",
+    "validate": "npm run check-unused && npm run lint && npm run typecheck && npm run format && npm run check:fixtures && npm run test:coverage && npm run test:e2e && npm run build && npm run audit",
     "watch": "tsc --project tsconfig.build.json --watch"
   },
   "dependencies": {
@@ -106,6 +107,7 @@
   "devDependencies": {
     "@playwright/test": "1.65.0",
     "@tsconfig/node-lts": "26.0.1",
+    "@types/jsdom": "30.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "26.6.6",
     "@types/unbzip2-stream": "^1.4.3",

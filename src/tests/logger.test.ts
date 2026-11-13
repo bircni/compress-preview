@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as loggerModule from "../logger";
 
 describe("logger", () => {
   afterEach(() => {
@@ -10,7 +9,7 @@ describe("logger", () => {
   it("writes info, warn, and error messages to the output channel", async () => {
     vi.resetModules();
     const appendLine = vi.fn();
-    const mod = (await import("../logger")) as typeof loggerModule;
+    const mod = await import("../logger");
 
     mod.setOutputChannel({ appendLine } as never);
 
@@ -30,7 +29,7 @@ describe("logger", () => {
   it("falls back to console.error when no output channel is set", async () => {
     vi.resetModules();
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const mod = (await import("../logger")) as typeof loggerModule;
+    const mod = await import("../logger");
 
     mod.logger.info("startup");
 

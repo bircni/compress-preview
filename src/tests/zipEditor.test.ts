@@ -3,8 +3,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as zipEditorModule from "../editor/zipEditor";
-import type * as zipEditorTestBridgeModule from "../editor/zipEditorTestBridge";
 
 type ProviderHarnessOptions = {
   archivePath?: string;
@@ -23,6 +21,7 @@ type ProviderHarnessOptions = {
       path: string;
       name: string;
       isDirectory: boolean;
+      size?: number;
       mtime?: Date | string | number;
     }[];
     isPartial: boolean;
@@ -53,8 +52,8 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     fs.writeFileSync(archivePath, "fixture");
   }
 
-  const executeCommand = vi.fn().mockResolvedValue();
-  const showTextDocument = vi.fn().mockResolvedValue();
+  const executeCommand = vi.fn<() => Promise<void>>().mockResolvedValue();
+  const showTextDocument = vi.fn<() => Promise<void>>().mockResolvedValue();
   const openTextDocument = options.openTextDocumentError
     ? vi.fn().mockRejectedValue(options.openTextDocumentError)
     : vi.fn().mockResolvedValue({ uri: { scheme: "compress-preview" } });
@@ -90,13 +89,13 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
       stream,
     };
   });
-  const extractEntry = vi.fn().mockResolvedValue();
-  const extractEntries = vi.fn().mockResolvedValue();
-  const extractAll = vi.fn().mockResolvedValue();
+  const extractEntry = vi.fn<() => Promise<void>>().mockResolvedValue();
+  const extractEntries = vi.fn<() => Promise<void>>().mockResolvedValue();
+  const extractAll = vi.fn<() => Promise<void>>().mockResolvedValue();
   const extractAllTargetDir = vi
     .fn()
     .mockReturnValue(path.join(path.dirname(archivePath), path.basename(archivePath, ".zip")));
-  const markTempPreviewUsed = vi.fn().mockResolvedValue();
+  const markTempPreviewUsed = vi.fn<() => Promise<void>>().mockResolvedValue();
 
   let messageHandler:
     | ((message: {
@@ -108,7 +107,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     | undefined;
 
   let fileWatcherChange: (() => void) | undefined;
-  const clipboardWriteText = vi.fn().mockResolvedValue();
+  const clipboardWriteText = vi.fn<() => Promise<void>>().mockResolvedValue();
   const createFileSystemWatcher = vi.fn(() => ({
     onDidChange: vi.fn((cb: () => void) => {
       fileWatcherChange = cb;
@@ -139,44 +138,40 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     extensionUri: { fsPath: process.cwd() },
   };
 
-  vi.doMock(
-    "vscode",
-    () => ({
-      Uri: {
-        file: (fsPath: string) => ({ fsPath }),
-        parse: (value: string) => ({ value }),
+  vi.doMock("vscode", () => ({
+    Uri: {
+      file: (fsPath: string) => ({ fsPath }),
+      parse: (value: string) => ({ value }),
+    },
+    // Minimal stub for vscode.RelativePattern (API expects a class-like constructor)
+    RelativePattern:
+      // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- matches VS Code's constructor-only RelativePattern
+      class {
+        constructor(_base: unknown, _pattern: string) {
+          void _base;
+          void _pattern;
+        }
       },
-      // Minimal stub for vscode.RelativePattern (API expects a class-like constructor)
-      RelativePattern:
-        // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- matches VS Code's constructor-only RelativePattern
-        class {
-          constructor(_base: unknown, _pattern: string) {
-            void _base;
-            void _pattern;
-          }
-        },
-      env: {
-        clipboard: {
-          writeText: clipboardWriteText,
-        },
+    env: {
+      clipboard: {
+        writeText: clipboardWriteText,
       },
-      window: {
-        showTextDocument,
-        createOutputChannel,
-        showOpenDialog,
-        showWarningMessage,
-      },
-      workspace: {
-        openTextDocument,
-        getConfiguration,
-        createFileSystemWatcher,
-      },
-      commands: {
-        executeCommand,
-      },
-    }),
-    { virtual: true },
-  );
+    },
+    window: {
+      showTextDocument,
+      createOutputChannel,
+      showOpenDialog,
+      showWarningMessage,
+    },
+    workspace: {
+      openTextDocument,
+      getConfiguration,
+      createFileSystemWatcher,
+    },
+    commands: {
+      executeCommand,
+    },
+  }));
   vi.doMock("../archive/archive", () => ({
     listEntries,
     openEntryReadStream,
@@ -188,7 +183,7 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     extractAllTargetDir,
   }));
   vi.doMock("../editor/archivePaths", () => ({
-    cleanupTempPreviews: vi.fn().mockResolvedValue(),
+    cleanupTempPreviews: vi.fn<() => Promise<void>>().mockResolvedValue(),
     createTempPreviewPath: vi.fn().mockImplementation((zipPath: string, entryPath: string) => {
       return path.join(os.tmpdir(), "compress-preview", path.basename(zipPath), entryPath);
     }),
@@ -205,11 +200,14 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     },
   }));
 
-  const zipEditorExports = (await import("../editor/zipEditor")) as typeof zipEditorModule;
-  const zipEditorTestBridge =
-    (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
+  const zipEditorExports = await import("../editor/zipEditor");
+  const zipEditorTestBridge = await import("../editor/zipEditorTestBridge");
   const provider = new zipEditorExports.ZipPreviewEditorProvider(mockExtensionContext as never);
-  const document = provider.openCustomDocument({ fsPath: archivePath }, {}, {});
+  const document = provider.openCustomDocument(
+    { fsPath: archivePath } as never,
+    {} as never,
+    {} as never,
+  );
   const panel = {
     viewColumn: 1,
     reveal,
@@ -229,7 +227,11 @@ async function createProviderHarness(options: ProviderHarnessOptions = {}) {
     },
   };
 
-  provider.resolveCustomEditor(document, panel as never, {});
+  provider.resolveCustomEditor(
+    document as Parameters<typeof provider.resolveCustomEditor>[0],
+    panel as never,
+    {} as never,
+  );
   if (options.useFakeTimers ?? true) {
     vi.advanceTimersByTime(100);
   }

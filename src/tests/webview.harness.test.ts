@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import fs from "node:fs";
 import path from "node:path";
 import { JSDOM } from "jsdom";
@@ -380,9 +381,9 @@ describe("webview harness", () => {
     if (!handle) {
       throw new Error("Resize handle not found");
     }
-    const rect = handle.getBoundingClientRect() as DOMRect;
-    const startX = Number(rect.left) + 2;
-    const startY = Number(rect.top) + 2;
+    const rect = handle.getBoundingClientRect();
+    const startX = rect.left + 2;
+    const startY = rect.top + 2;
 
     handle.dispatchEvent(
       new window.MouseEvent("mousedown", {
@@ -395,7 +396,7 @@ describe("webview harness", () => {
     document.dispatchEvent(
       new window.MouseEvent("mousemove", {
         bubbles: true,
-        clientX: Number(rect.left) + 40,
+        clientX: rect.left + 40,
         clientY: startY,
       }),
     );
@@ -536,7 +537,8 @@ describe("webview harness", () => {
       );
     };
 
-    const focusedPath = () => document.querySelector("tr.row.is-focused")?.dataset.path;
+    const focusedPath = () =>
+      document.querySelector<HTMLElement>("tr.row.is-focused")?.dataset.path;
 
     press("ArrowDown");
     expect(focusedPath()).toBe("docs/");
