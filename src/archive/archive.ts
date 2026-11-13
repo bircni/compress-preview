@@ -11,6 +11,7 @@ import type { ArchiveEntry, EntryContentStream } from "./entry";
 import { detectArchiveKind, getGzipEntryName, type SingleFileKind, type TarKind } from "./format";
 import { createDecompressTransform } from "./decompress";
 import { formatPartialListMessage } from "./listTimeout";
+import { listArEntries, openArEntryReadStream } from "./ar";
 import { listSevenZipEntries, openSevenZipEntryReadStream } from "./sevenZip";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -531,6 +532,12 @@ export function listEntries(
         }
         return result;
       });
+    case "ar":
+      return listArEntries(archivePath).then((entries) => ({
+        entries,
+        isPartial: false,
+        sizeBytes,
+      }));
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
@@ -564,6 +571,8 @@ export function openEntryReadStream(
       return openGzipEntryReadStream(archivePath, entryPath, archiveKind);
     case "7z":
       return openSevenZipEntryReadStream(archivePath, entryPath);
+    case "ar":
+      return openArEntryReadStream(archivePath, entryPath);
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }

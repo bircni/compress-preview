@@ -44,8 +44,9 @@ Before making changes:
 **Archive (zip reading):**
 
 - `archive/archive.ts` – List entries (time-bound), open read stream for one entry, archive size; uses yauzl with `lazyEntries: true`
-- `archive/format.ts` – Detect archive kind from extension (zip, tar, tgz, tbz, txz, tzst, gz, bz2, xz, zst, 7z)
+- `archive/format.ts` – Detect archive kind from extension (zip, tar, tgz, tbz, txz, tzst, tlz, gz, bz2, xz, zst, lzma, 7z, ar)
 - `archive/decompress.ts` – Stream decompressors for gzip, bzip2, xz, and zstd
+- `archive/ar.ts` – List, open, and extract Unix `ar` members (`.deb`, `.a`, `.ar`; GNU and BSD long names)
 - `archive/sevenZip.ts` – List, open, and extract 7z entries via 7z-iterator (password-protected 7z is rejected)
 - `archive/entry.ts` – Types: `ArchiveEntry`, `EntryContentStream`; helper `entryNameFromPath`
 - `archive/extract.ts` – Extract one entry, selected entries (`extractEntries`), or all entries; `extractAllTargetDir` (sibling folder rule)

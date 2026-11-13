@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 export type TarKind = "tar" | "tgz" | "tbz" | "txz" | "tzst" | "tlz";
 export type SingleFileKind = "gz" | "bz2" | "xz" | "zst" | "lzma";
-export type ArchiveKind = "zip" | TarKind | SingleFileKind | "7z";
+export type ArchiveKind = "zip" | TarKind | SingleFileKind | "7z" | "ar";
 
 const ZIP_BASED_ARCHIVE_EXTENSIONS = [
   ".zip",
@@ -54,6 +54,7 @@ const XZ_ARCHIVE_EXTENSIONS = [".xz"] as const;
 const LZMA_ARCHIVE_EXTENSIONS = [".lzma"] as const;
 const ZSTD_ARCHIVE_EXTENSIONS = [".zst", ".zstd"] as const;
 const SEVEN_ZIP_ARCHIVE_EXTENSIONS = [".7z"] as const;
+const AR_ARCHIVE_EXTENSIONS = [".deb", ".udeb", ".ar", ".a"] as const;
 
 export const SUPPORTED_ARCHIVE_EXTENSIONS = [
   ...TBZ_ARCHIVE_EXTENSIONS,
@@ -66,6 +67,7 @@ export const SUPPORTED_ARCHIVE_EXTENSIONS = [
   ...LZMA_ARCHIVE_EXTENSIONS,
   ...ZSTD_ARCHIVE_EXTENSIONS,
   ...SEVEN_ZIP_ARCHIVE_EXTENSIONS,
+  ...AR_ARCHIVE_EXTENSIONS,
   ...ZIP_BASED_ARCHIVE_EXTENSIONS,
   ...TAR_ARCHIVE_EXTENSIONS,
   ...GZIP_ARCHIVE_EXTENSIONS,
@@ -111,6 +113,9 @@ export function detectArchiveKind(filePath: string): ArchiveKind {
   }
   if (SEVEN_ZIP_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
     return "7z";
+  }
+  if (AR_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
+    return "ar";
   }
   if (BZIP2_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
     return "bz2";
