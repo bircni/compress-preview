@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as extensionModule from "../extension";
 
 describe("extension", () => {
   const originalEnableTestCommands = process.env.COMPRESS_PREVIEW_ENABLE_TEST_COMMANDS;
@@ -39,24 +38,20 @@ describe("extension", () => {
     const clearMessages = vi.fn();
     const reset = vi.fn();
 
-    vi.doMock(
-      "vscode",
-      () => ({
-        window: {
-          createOutputChannel,
-          registerCustomEditorProvider,
-        },
-        workspace: {
-          getConfiguration: vi.fn(() => ({
-            get: vi.fn((_key: string, defaultValue: unknown) => defaultValue),
-          })),
-        },
-        commands: {
-          registerCommand,
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      window: {
+        createOutputChannel,
+        registerCustomEditorProvider,
+      },
+      workspace: {
+        getConfiguration: vi.fn(() => ({
+          get: vi.fn((_key: string, defaultValue: unknown) => defaultValue),
+        })),
+      },
+      commands: {
+        registerCommand,
+      },
+    }));
     vi.doMock("../editor/zipContentProvider", () => ({
       registerZipContentProvider,
     }));
@@ -74,7 +69,7 @@ describe("extension", () => {
       resetZipEditorTestState: reset,
     }));
 
-    const { activate, deactivate } = (await import("../extension")) as typeof extensionModule;
+    const { activate, deactivate } = await import("../extension");
     const context = { subscriptions: [] as unknown[] };
 
     activate(context as never);
@@ -102,7 +97,16 @@ describe("extension", () => {
     const registration = { dispose: vi.fn() };
     const createOutputChannel = vi.fn(() => channel);
     const registerCustomEditorProvider = vi.fn(() => registration);
-    const registerCommand = vi.fn(() => registration);
+    const registerCommand = vi.fn(
+      (_command: string, _callback: (...args: unknown[]) => unknown) => registration,
+    );
+    const commandCallback = (index: number): ((...args: unknown[]) => unknown) => {
+      const call = registerCommand.mock.calls[index];
+      if (!call) {
+        throw new Error(`registerCommand call ${index} missing`);
+      }
+      return call[1];
+    };
     const registerZipContentProvider = vi.fn();
     const setOutputChannel = vi.fn();
     const providerInstance = {};
@@ -116,24 +120,20 @@ describe("extension", () => {
     const clearMessages = vi.fn();
     const reset = vi.fn();
 
-    vi.doMock(
-      "vscode",
-      () => ({
-        window: {
-          createOutputChannel,
-          registerCustomEditorProvider,
-        },
-        workspace: {
-          getConfiguration: vi.fn(() => ({
-            get: vi.fn((_key: string, defaultValue: unknown) => defaultValue),
-          })),
-        },
-        commands: {
-          registerCommand,
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      window: {
+        createOutputChannel,
+        registerCustomEditorProvider,
+      },
+      workspace: {
+        getConfiguration: vi.fn(() => ({
+          get: vi.fn((_key: string, defaultValue: unknown) => defaultValue),
+        })),
+      },
+      commands: {
+        registerCommand,
+      },
+    }));
     vi.doMock("../editor/zipContentProvider", () => ({
       registerZipContentProvider,
     }));
@@ -151,21 +151,21 @@ describe("extension", () => {
       resetZipEditorTestState: reset,
     }));
 
-    const { activate } = (await import("../extension")) as typeof extensionModule;
+    const { activate } = await import("../extension");
     const context = { subscriptions: [] as unknown[] };
 
     activate(context as never);
 
     expect(ZipPreviewEditorProvider).toHaveBeenCalledWith(context);
     expect(registerCommand).toHaveBeenCalledTimes(5);
-    expect(registerCommand.mock.calls[0][1]()).toBe("state");
-    registerCommand.mock.calls[1][1]({ type: "retryLoad" });
+    expect(commandCallback(0)()).toBe("state");
+    commandCallback(1)({ type: "retryLoad" });
     expect(postMessage).toHaveBeenCalledWith({ type: "retryLoad" });
-    registerCommand.mock.calls[2][1]();
+    commandCallback(2)();
     expect(setOverrides).toHaveBeenCalledWith({});
-    registerCommand.mock.calls[3][1]();
+    commandCallback(3)();
     expect(clearMessages).toHaveBeenCalled();
-    registerCommand.mock.calls[4][1]();
+    commandCallback(4)();
     expect(reset).toHaveBeenCalled();
     expect(context.subscriptions).toEqual([
       channel,

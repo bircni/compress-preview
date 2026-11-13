@@ -89,8 +89,11 @@ function createTar(
   return new Promise((resolve, reject) => {
     const pack = tar.pack();
     const out = fs.createWriteStream(tarPath);
-    const target = options.gzip ? pack.pipe(zlib.createGzip()) : pack;
-    target.pipe(out);
+    if (options.gzip) {
+      pack.pipe(zlib.createGzip()).pipe(out);
+    } else {
+      pack.pipe(out);
+    }
     out.on("close", resolve);
     out.on("error", reject);
     pack.on("error", reject);
@@ -103,11 +106,15 @@ function createTar(
         });
         return;
       }
-      pack.entry({ name: file.name, type: file.type }, file.content ?? "", (error) => {
-        if (error) {
-          reject(error);
-        }
-      });
+      pack.entry(
+        { name: file.name, ...(file.type ? { type: file.type } : {}) },
+        file.content ?? "",
+        (error) => {
+          if (error) {
+            reject(error);
+          }
+        },
+      );
     });
     pack.finalize();
   });

@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as zipEditorTestBridgeModule from "../editor/zipEditorTestBridge";
 
 describe("zipEditorTestBridge", () => {
   afterEach(() => {
@@ -12,23 +11,18 @@ describe("zipEditorTestBridge", () => {
     const showOpenDialog = vi.fn();
     const showWarningMessage = vi.fn();
 
-    vi.doMock(
-      "vscode",
-      () => ({
-        Uri: {
-          file: (fsPath: string) => ({ fsPath }),
-        },
-        window: {
-          showOpenDialog,
-          showWarningMessage,
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      Uri: {
+        file: (fsPath: string) => ({ fsPath }),
+      },
+      window: {
+        showOpenDialog,
+        showWarningMessage,
+      },
+    }));
 
-    const bridge =
-      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
-    const handleMessage = vi.fn().mockResolvedValue();
+    const bridge = await import("../editor/zipEditorTestBridge");
+    const handleMessage = vi.fn<() => Promise<void>>().mockResolvedValue();
 
     expect(bridge.getZipEditorTestListTimeoutMs(10_000)).toBe(10_000);
     bridge.setZipEditorTestOverrides({ listTimeoutMs: 1 });
@@ -67,22 +61,17 @@ describe("zipEditorTestBridge", () => {
     const showOpenDialog = vi.fn().mockResolvedValue([{ fsPath: "/tmp/from-vscode" }]);
     const showWarningMessage = vi.fn().mockResolvedValue("Overwrite");
 
-    vi.doMock(
-      "vscode",
-      () => ({
-        Uri: {
-          file: (fsPath: string) => ({ fsPath }),
-        },
-        window: {
-          showOpenDialog,
-          showWarningMessage,
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      Uri: {
+        file: (fsPath: string) => ({ fsPath }),
+      },
+      window: {
+        showOpenDialog,
+        showWarningMessage,
+      },
+    }));
 
-    const bridge =
-      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
+    const bridge = await import("../editor/zipEditorTestBridge");
 
     bridge.setZipEditorTestOverrides({
       nextOpenDialogPaths: ["/tmp/override"],
@@ -107,22 +96,17 @@ describe("zipEditorTestBridge", () => {
     const showOpenDialog = vi.fn();
     const showWarningMessage = vi.fn().mockResolvedValue("From vscode");
 
-    vi.doMock(
-      "vscode",
-      () => ({
-        Uri: {
-          file: (fsPath: string) => ({ fsPath }),
-        },
-        window: {
-          showOpenDialog,
-          showWarningMessage,
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      Uri: {
+        file: (fsPath: string) => ({ fsPath }),
+      },
+      window: {
+        showOpenDialog,
+        showWarningMessage,
+      },
+    }));
 
-    const bridge =
-      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
+    const bridge = await import("../editor/zipEditorTestBridge");
     const warningMessage = bridge.createZipEditorWarningMessageHandler();
 
     bridge.setZipEditorTestOverrides({
@@ -139,22 +123,17 @@ describe("zipEditorTestBridge", () => {
   });
 
   it("resets overrides and rejects dispatch without an active session", async () => {
-    vi.doMock(
-      "vscode",
-      () => ({
-        Uri: {
-          file: (fsPath: string) => ({ fsPath }),
-        },
-        window: {
-          showOpenDialog: vi.fn(),
-          showWarningMessage: vi.fn(),
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      Uri: {
+        file: (fsPath: string) => ({ fsPath }),
+      },
+      window: {
+        showOpenDialog: vi.fn(),
+        showWarningMessage: vi.fn(),
+      },
+    }));
 
-    const bridge =
-      (await import("../editor/zipEditorTestBridge")) as typeof zipEditorTestBridgeModule;
+    const bridge = await import("../editor/zipEditorTestBridge");
 
     bridge.setZipEditorTestOverrides({
       listTimeoutMs: 1,

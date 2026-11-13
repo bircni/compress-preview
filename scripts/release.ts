@@ -33,6 +33,9 @@ function parseArgs(argv: string[]): { customVersion: string | null | undefined }
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg === undefined) {
+      continue;
+    }
     if (arg === "--version" || arg === "-v") {
       customVersion = args[i + 1];
       i += 1;

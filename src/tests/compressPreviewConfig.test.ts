@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as compressPreviewConfigModule from "../editor/compressPreviewConfig";
 
 describe("compressPreviewConfig", () => {
   afterEach(() => {
@@ -14,18 +13,13 @@ describe("compressPreviewConfig", () => {
       }
       return defaultValue;
     });
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          getConfiguration: vi.fn(() => ({ get })),
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      workspace: {
+        getConfiguration: vi.fn(() => ({ get })),
+      },
+    }));
 
-    const { readTempPreviewMaxAgeMs } =
-      (await import("../editor/compressPreviewConfig")) as typeof compressPreviewConfigModule;
+    const { readTempPreviewMaxAgeMs } = await import("../editor/compressPreviewConfig");
 
     expect(readTempPreviewMaxAgeMs()).toBe(365 * 24 * 60 * 60 * 1000);
     expect(get).toHaveBeenCalledWith("tempPreviewMaxAgeDays", 7);
@@ -38,18 +32,13 @@ describe("compressPreviewConfig", () => {
       }
       return defaultValue;
     });
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          getConfiguration: vi.fn(() => ({ get })),
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      workspace: {
+        getConfiguration: vi.fn(() => ({ get })),
+      },
+    }));
 
-    const { readTempPreviewMaxAgeMs } =
-      (await import("../editor/compressPreviewConfig")) as typeof compressPreviewConfigModule;
+    const { readTempPreviewMaxAgeMs } = await import("../editor/compressPreviewConfig");
 
     expect(readTempPreviewMaxAgeMs()).toBe(7 * 24 * 60 * 60 * 1000);
   });
@@ -61,18 +50,13 @@ describe("compressPreviewConfig", () => {
       }
       return defaultValue;
     });
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          getConfiguration: vi.fn(() => ({ get })),
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      workspace: {
+        getConfiguration: vi.fn(() => ({ get })),
+      },
+    }));
 
-    const { readMaxTextPreviewBytes } =
-      (await import("../editor/compressPreviewConfig")) as typeof compressPreviewConfigModule;
+    const { readMaxTextPreviewBytes } = await import("../editor/compressPreviewConfig");
 
     expect(readMaxTextPreviewBytes()).toBe(1024);
     expect(get).toHaveBeenCalledWith("maxTextPreviewBytes", 2 * 1024 * 1024);
@@ -85,18 +69,13 @@ describe("compressPreviewConfig", () => {
       }
       return defaultValue;
     });
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          getConfiguration: vi.fn(() => ({ get })),
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      workspace: {
+        getConfiguration: vi.fn(() => ({ get })),
+      },
+    }));
 
-    const { readMaxTextPreviewBytes } =
-      (await import("../editor/compressPreviewConfig")) as typeof compressPreviewConfigModule;
+    const { readMaxTextPreviewBytes } = await import("../editor/compressPreviewConfig");
 
     expect(readMaxTextPreviewBytes()).toBe(0);
   });
@@ -108,18 +87,13 @@ describe("compressPreviewConfig", () => {
       }
       return defaultValue;
     });
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          getConfiguration: vi.fn(() => ({ get })),
-        },
-      }),
-      { virtual: true },
-    );
+    vi.doMock("vscode", () => ({
+      workspace: {
+        getConfiguration: vi.fn(() => ({ get })),
+      },
+    }));
 
-    const configModule =
-      (await import("../editor/compressPreviewConfig")) as typeof compressPreviewConfigModule;
+    const configModule = await import("../editor/compressPreviewConfig");
     expect(configModule.readMaxTextPreviewBytes()).toBe(2 * 1024 * 1024);
 
     vi.resetModules();
@@ -129,17 +103,12 @@ describe("compressPreviewConfig", () => {
       }
       return defaultValue;
     });
-    vi.doMock(
-      "vscode",
-      () => ({
-        workspace: {
-          getConfiguration: vi.fn(() => ({ get: getCapped })),
-        },
-      }),
-      { virtual: true },
-    );
-    const cappedModule =
-      (await import("../editor/compressPreviewConfig")) as typeof compressPreviewConfigModule;
+    vi.doMock("vscode", () => ({
+      workspace: {
+        getConfiguration: vi.fn(() => ({ get: getCapped })),
+      },
+    }));
+    const cappedModule = await import("../editor/compressPreviewConfig");
     expect(cappedModule.readMaxTextPreviewBytes()).toBe(100 * 1024 * 1024);
   });
 });
