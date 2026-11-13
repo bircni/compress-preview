@@ -313,7 +313,27 @@ function extractGzipEntry(
 /**
  * Extract a single entry from the archive to outPath (file or directory).
  */
-export function extractEntry(
+/**
+ * Extract one entry to outPath. If extraction fails and outPath did not exist
+ * beforehand, the partially written output is removed.
+ */
+export async function extractEntry(
+  archivePath: string,
+  entryPath: string,
+  outPath: string,
+): Promise<void> {
+  const existed = fs.existsSync(outPath);
+  try {
+    await extractEntryByKind(archivePath, entryPath, outPath);
+  } catch (error) {
+    if (!existed) {
+      fs.rmSync(outPath, { recursive: true, force: true });
+    }
+    throw error;
+  }
+}
+
+function extractEntryByKind(
   archivePath: string,
   entryPath: string,
   outPath: string,
