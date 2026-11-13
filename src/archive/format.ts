@@ -1,7 +1,7 @@
 import * as path from "node:path";
 
-export type TarKind = "tar" | "tgz" | "tbz" | "txz" | "tzst";
-export type SingleFileKind = "gz" | "bz2" | "xz" | "zst";
+export type TarKind = "tar" | "tgz" | "tbz" | "txz" | "tzst" | "tlz";
+export type SingleFileKind = "gz" | "bz2" | "xz" | "zst" | "lzma";
 export type ArchiveKind = "zip" | TarKind | SingleFileKind | "7z";
 
 const ZIP_BASED_ARCHIVE_EXTENSIONS = [
@@ -34,10 +34,12 @@ const TAR_ARCHIVE_EXTENSIONS = [".tar"] as const;
 const TGZ_ARCHIVE_EXTENSIONS = [".tgz", ".tar.gz"] as const;
 const TBZ_ARCHIVE_EXTENSIONS = [".tbz2", ".tbz", ".tar.bz2", ".tar.bzip2"] as const;
 const TXZ_ARCHIVE_EXTENSIONS = [".txz", ".tar.xz"] as const;
+const TLZ_ARCHIVE_EXTENSIONS = [".tlz", ".tar.lzma"] as const;
 const TZST_ARCHIVE_EXTENSIONS = [".tzst", ".tar.zst", ".tar.zstd"] as const;
 const GZIP_ARCHIVE_EXTENSIONS = [".gz"] as const;
 const BZIP2_ARCHIVE_EXTENSIONS = [".bz2", ".bzip2"] as const;
-const XZ_ARCHIVE_EXTENSIONS = [".xz", ".lzma"] as const;
+const XZ_ARCHIVE_EXTENSIONS = [".xz"] as const;
+const LZMA_ARCHIVE_EXTENSIONS = [".lzma"] as const;
 const ZSTD_ARCHIVE_EXTENSIONS = [".zst", ".zstd"] as const;
 const SEVEN_ZIP_ARCHIVE_EXTENSIONS = [".7z"] as const;
 
@@ -45,9 +47,11 @@ const SUPPORTED_ARCHIVE_EXTENSIONS = [
   ...TBZ_ARCHIVE_EXTENSIONS,
   ...TXZ_ARCHIVE_EXTENSIONS,
   ...TZST_ARCHIVE_EXTENSIONS,
+  ...TLZ_ARCHIVE_EXTENSIONS,
   ...TGZ_ARCHIVE_EXTENSIONS,
   ...BZIP2_ARCHIVE_EXTENSIONS,
   ...XZ_ARCHIVE_EXTENSIONS,
+  ...LZMA_ARCHIVE_EXTENSIONS,
   ...ZSTD_ARCHIVE_EXTENSIONS,
   ...SEVEN_ZIP_ARCHIVE_EXTENSIONS,
   ...ZIP_BASED_ARCHIVE_EXTENSIONS,
@@ -56,11 +60,18 @@ const SUPPORTED_ARCHIVE_EXTENSIONS = [
 ] as const;
 
 export function isTarKind(kind: ArchiveKind): kind is TarKind {
-  return kind === "tar" || kind === "tgz" || kind === "tbz" || kind === "txz" || kind === "tzst";
+  return (
+    kind === "tar" ||
+    kind === "tgz" ||
+    kind === "tbz" ||
+    kind === "txz" ||
+    kind === "tzst" ||
+    kind === "tlz"
+  );
 }
 
 export function isSingleFileKind(kind: ArchiveKind): kind is SingleFileKind {
-  return kind === "gz" || kind === "bz2" || kind === "xz" || kind === "zst";
+  return kind === "gz" || kind === "bz2" || kind === "xz" || kind === "zst" || kind === "lzma";
 }
 
 export function detectArchiveKind(filePath: string): ArchiveKind {
@@ -77,6 +88,9 @@ export function detectArchiveKind(filePath: string): ArchiveKind {
   if (TZST_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
     return "tzst";
   }
+  if (TLZ_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
+    return "tlz";
+  }
   if (TGZ_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
     return "tgz";
   }
@@ -91,6 +105,9 @@ export function detectArchiveKind(filePath: string): ArchiveKind {
   }
   if (XZ_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
     return "xz";
+  }
+  if (LZMA_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
+    return "lzma";
   }
   if (ZSTD_ARCHIVE_EXTENSIONS.some((extension) => lowerPath.endsWith(extension))) {
     return "zst";

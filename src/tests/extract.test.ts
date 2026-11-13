@@ -420,6 +420,7 @@ describe("extract", () => {
     ["hello.txt.bz2", "helloBz2"],
     ["hello.txt.xz", "helloXz"],
     ["hello.txt.zst", "helloZst"],
+    ["hello.txt.lzma", "helloLzma"],
   ] as const)("extracts the decompressed file from %s", async (fileName, fixtureName) => {
     const archivePath = path.join(TMP_DIR, fileName);
     writeCompressedFixture(archivePath, fixtureName);
@@ -438,6 +439,7 @@ describe("extract", () => {
     ["sample.tar.bz2", "sampleTarBz2"],
     ["sample.tar.xz", "sampleTarXz"],
     ["sample.tar.zst", "sampleTarZst"],
+    ["sample.tar.lzma", "sampleTarLzma"],
   ] as const)("extracts all files from %s", async (fileName, fixtureName) => {
     const archivePath = path.join(TMP_DIR, fileName);
     writeCompressedFixture(archivePath, fixtureName);

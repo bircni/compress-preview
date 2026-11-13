@@ -1,6 +1,6 @@
 # Compress Preview
 
-Preview the contents of ZIP-, TAR-, GZIP-, 7z-, XZ-, BZIP2-, and Zstandard-based archive files directly inside VS Code.
+Preview the contents of ZIP-, TAR-, GZIP-, 7z-, XZ-, LZMA-, BZIP2-, and Zstandard-based archive files directly inside VS Code.
 
 Compress Preview replaces the usual binary file experience with a focused archive view so you can inspect entries, open text files, and extract files without leaving the editor.
 
@@ -27,7 +27,7 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 
 ## Supported Archive Formats
 
-`.zip`, `.jar`, `.apk`, `.vsix`, `.xpi`, `.whl`, `.war`, `.ear`, `.tar`, `.tgz`, `.tar.gz`, `.gz`, `.tbz2`, `.tbz`, `.tar.bz2`, `.txz`, `.tar.xz`, `.tzst`, `.tar.zst`, `.bz2`, `.xz`, `.zst`, `.7z`, `.epub`,
+`.zip`, `.jar`, `.apk`, `.vsix`, `.xpi`, `.whl`, `.war`, `.ear`, `.tar`, `.tgz`, `.tar.gz`, `.gz`, `.tbz2`, `.tbz`, `.tar.bz2`, `.txz`, `.tar.xz`, `.tlz`, `.tar.lzma`, `.tzst`, `.tar.zst`, `.bz2`, `.xz`, `.lzma`, `.zst`, `.7z`, `.epub`,
 `.docx`, `.pptx`, `.xlsx`, `.odt`, `.ods`, `.odp`, `.aar`, `.crx`, `.nupkg`, `.cbz`, `.kmz`, `.ipa`, `.appx`, `.msix`
 
 ## What Opens In The Editor
@@ -37,7 +37,7 @@ Text-like files open directly in VS Code as read-only virtual documents, includi
 
 Additional extensions in `compress-preview.textExtensions` are classified as text in both the archive tree and the editor, so a `.toml` file is not shown as Binary.
 
-Common binary files open through a temporary extracted preview file so they can use VS Code's normal file handling. GZIP, BZIP2, XZ, and Zstandard archives expose a single decompressed file entry in the preview.
+Common binary files open through a temporary extracted preview file so they can use VS Code's normal file handling. GZIP, BZIP2, XZ, LZMA, and Zstandard archives expose a single decompressed file entry in the preview.
 
 ## Settings
 

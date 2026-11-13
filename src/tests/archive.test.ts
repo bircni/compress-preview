@@ -364,6 +364,8 @@ describe("archive", () => {
     ["hello.txt.bz2", "helloBz2"],
     ["hello.txt.xz", "helloXz"],
     ["hello.txt.zst", "helloZst"],
+    ["hello.txt.lzma", "helloLzma"],
+    ["hello.txt.lzma", "helloLzmaSized"],
   ] as const)("lists and opens a single-file %s archive", async (fileName, fixtureName) => {
     const archivePath = path.join(TMP_DIR, fileName);
     writeCompressedFixture(archivePath, fixtureName);
@@ -389,6 +391,8 @@ describe("archive", () => {
     ["sample.tar.bz2", "sampleTarBz2"],
     ["sample.tar.xz", "sampleTarXz"],
     ["sample.tar.zst", "sampleTarZst"],
+    ["sample.tar.lzma", "sampleTarLzma"],
+    ["sample.tlz", "sampleTarLzma"],
   ] as const)("lists and opens entries from %s", async (fileName, fixtureName) => {
     const archivePath = path.join(TMP_DIR, fileName);
     writeCompressedFixture(archivePath, fixtureName);

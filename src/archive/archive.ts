@@ -513,11 +513,13 @@ export function listEntries(
     case "tbz":
     case "txz":
     case "tzst":
+    case "tlz":
       return listTarEntries(archivePath, archiveKind, sizeBytes, timeoutMs);
     case "gz":
     case "bz2":
     case "xz":
     case "zst":
+    case "lzma":
       return listGzipEntries(archivePath, sizeBytes);
     case "7z":
       return listSevenZipEntries(archivePath, sizeBytes, timeoutMs).then((result) => {
@@ -552,11 +554,13 @@ export function openEntryReadStream(
     case "tbz":
     case "txz":
     case "tzst":
+    case "tlz":
       return openTarEntryReadStream(archivePath, archiveKind, entryPath);
     case "gz":
     case "bz2":
     case "xz":
     case "zst":
+    case "lzma":
       return openGzipEntryReadStream(archivePath, entryPath, archiveKind);
     case "7z":
       return openSevenZipEntryReadStream(archivePath, entryPath);
