@@ -14,6 +14,7 @@ import {
   type SingleFileKind,
   type TarKind,
 } from "./format";
+import { extractAllAr, extractArEntry } from "./ar";
 import { extractAllSevenZip, extractSevenZipEntry } from "./sevenZip";
 
 type ExtractAllConflictMode = "merge" | "replace";
@@ -336,6 +337,8 @@ export function extractEntry(
       return extractGzipEntry(archivePath, entryPath, outPath, archiveKind);
     case "7z":
       return extractSevenZipEntry(archivePath, entryPath, outPath);
+    case "ar":
+      return extractArEntry(archivePath, entryPath, outPath);
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
@@ -738,24 +741,29 @@ function extractFilteredEntries(
     case "lzma":
       return extractAllGzip(archivePath, outDir, conflictMode, archiveKind, includeEntry);
     case "7z":
-      return extractAllSevenZipWithSession(
-        archivePath,
+      return extractAllWithSession(
+        (writeDir) => extractAllSevenZip(archivePath, writeDir, includeEntry, requireMatch),
         outDir,
         conflictMode,
-        includeEntry,
-        requireMatch,
+        "Failed to extract 7z archive",
+      );
+    case "ar":
+      return extractAllWithSession(
+        (writeDir) => extractAllAr(archivePath, writeDir, includeEntry, requireMatch),
+        outDir,
+        conflictMode,
+        "Failed to extract ar archive",
       );
     default:
       return Promise.reject(new Error(`Unsupported archive kind: ${archiveKind}`));
   }
 }
 
-async function extractAllSevenZipWithSession(
-  archivePath: string,
+async function extractAllWithSession(
+  write: (writeDir: string) => Promise<void>,
   outDir: string,
   conflictMode: "fail" | ExtractAllConflictMode,
-  includeEntry: (entryName: string) => boolean,
-  requireMatch: boolean,
+  fallbackMessage: string,
 ): Promise<void> {
   let session: ReturnType<typeof beginExtractAll>;
   try {
@@ -764,10 +772,10 @@ async function extractAllSevenZipWithSession(
     throw error instanceof Error ? error : new Error("Failed to prepare extract target");
   }
   try {
-    await extractAllSevenZip(archivePath, session.writeDir, includeEntry, requireMatch);
+    await write(session.writeDir);
     session.commit();
   } catch (error) {
     session.abort();
-    throw error instanceof Error ? error : new Error("Failed to extract 7z archive");
+    throw error instanceof Error ? error : new Error(fallbackMessage);
   }
 }

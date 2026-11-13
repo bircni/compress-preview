@@ -1,6 +1,6 @@
 # Compress Preview
 
-Preview the contents of ZIP-, TAR-, GZIP-, 7z-, XZ-, LZMA-, BZIP2-, and Zstandard-based archive files directly inside VS Code.
+Preview the contents of ZIP-, TAR-, GZIP-, 7z-, XZ-, LZMA-, BZIP2-, Zstandard-, and ar/DEB-based archive files directly inside VS Code.
 
 Compress Preview replaces the usual binary file experience with a focused archive view so you can inspect entries, open text files, and extract files without leaving the editor.
 
@@ -27,7 +27,7 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 
 ## Supported Archive Formats
 
-`.zip`, `.jar`, `.apk`, `.vsix`, `.xpi`, `.whl`, `.war`, `.ear`, `.tar`, `.tgz`, `.tar.gz`, `.gz`, `.tbz2`, `.tbz`, `.tar.bz2`, `.txz`, `.tar.xz`, `.tlz`, `.tar.lzma`, `.tzst`, `.tar.zst`, `.bz2`, `.xz`, `.lzma`, `.zst`, `.7z`, `.epub`,
+`.zip`, `.jar`, `.apk`, `.vsix`, `.xpi`, `.whl`, `.war`, `.ear`, `.tar`, `.tgz`, `.tar.gz`, `.gz`, `.tbz2`, `.tbz`, `.tar.bz2`, `.txz`, `.tar.xz`, `.tlz`, `.tar.lzma`, `.tzst`, `.tar.zst`, `.bz2`, `.xz`, `.lzma`, `.zst`, `.7z`, `.deb`, `.udeb`, `.ar`, `.a`, `.epub`,
 `.docx`, `.pptx`, `.xlsx`, `.odt`, `.ods`, `.odp`, `.aar`, `.crx`, `.nupkg`, `.cbz`, `.kmz`, `.ipa`, `.appx`, `.msix`,
 `.aab`, `.xapk`, `.docm`, `.xlsm`, `.pptm`, `.odg`, `.vsdx`, `.3mf`, `.pkpass`, `.sublime-package`, `.mcpack`, `.sketch`
 
