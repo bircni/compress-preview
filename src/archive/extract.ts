@@ -326,11 +326,13 @@ export function extractEntry(
     case "tbz":
     case "txz":
     case "tzst":
+    case "tlz":
       return extractTarEntry(archivePath, archiveKind, entryPath, outPath);
     case "gz":
     case "bz2":
     case "xz":
     case "zst":
+    case "lzma":
       return extractGzipEntry(archivePath, entryPath, outPath, archiveKind);
     case "7z":
       return extractSevenZipEntry(archivePath, entryPath, outPath);
@@ -720,6 +722,7 @@ function extractFilteredEntries(
     case "tbz":
     case "txz":
     case "tzst":
+    case "tlz":
       return extractAllTar(
         archivePath,
         archiveKind,
@@ -732,6 +735,7 @@ function extractFilteredEntries(
     case "bz2":
     case "xz":
     case "zst":
+    case "lzma":
       return extractAllGzip(archivePath, outDir, conflictMode, archiveKind, includeEntry);
     case "7z":
       return extractAllSevenZipWithSession(

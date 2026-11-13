@@ -1,7 +1,7 @@
 {
   "name": "compress-preview",
   "displayName": "Compress Preview",
-  "description": "VS Code extension: preview ZIP, TAR, GZIP, 7z, XZ, BZIP2, Zstandard, EPUB, DOCX, PPTX, and XLSX archive contents directly in the editor",
+  "description": "VS Code extension: preview ZIP, TAR, GZIP, 7z, XZ, LZMA, BZIP2, Zstandard, EPUB, DOCX, PPTX, and XLSX archive contents directly in the editor",
   "publisher": "bircni",
   "version": "0.7.1",
   "icon": "assets/icon.png",
@@ -26,6 +26,7 @@
     "bz2",
     "zstd",
     "zst",
+    "lzma",
     "jar",
     "apk",
     "vsix",
@@ -277,6 +278,12 @@
           },
           {
             "filenamePattern": "*.tar.zstd"
+          },
+          {
+            "filenamePattern": "*.tlz"
+          },
+          {
+            "filenamePattern": "*.tar.lzma"
           },
           {
             "filenamePattern": "*.gz"
