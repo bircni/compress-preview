@@ -3,6 +3,7 @@
   "compilerOptions": {
     "lib": ["esnext"],
     "target": "esnext",
+    "strict": true,
     "isolatedModules": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
