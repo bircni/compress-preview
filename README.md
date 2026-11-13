@@ -28,7 +28,8 @@ Compress Preview replaces the usual binary file experience with a focused archiv
 ## Supported Archive Formats
 
 `.zip`, `.jar`, `.apk`, `.vsix`, `.xpi`, `.whl`, `.war`, `.ear`, `.tar`, `.tgz`, `.tar.gz`, `.gz`, `.tbz2`, `.tbz`, `.tar.bz2`, `.txz`, `.tar.xz`, `.tlz`, `.tar.lzma`, `.tzst`, `.tar.zst`, `.bz2`, `.xz`, `.lzma`, `.zst`, `.7z`, `.epub`,
-`.docx`, `.pptx`, `.xlsx`, `.odt`, `.ods`, `.odp`, `.aar`, `.crx`, `.nupkg`, `.cbz`, `.kmz`, `.ipa`, `.appx`, `.msix`
+`.docx`, `.pptx`, `.xlsx`, `.odt`, `.ods`, `.odp`, `.aar`, `.crx`, `.nupkg`, `.cbz`, `.kmz`, `.ipa`, `.appx`, `.msix`,
+`.aab`, `.xapk`, `.docm`, `.xlsm`, `.pptm`, `.odg`, `.vsdx`, `.3mf`, `.pkpass`, `.sublime-package`, `.mcpack`, `.sketch`
 
 ## What Opens In The Editor
 

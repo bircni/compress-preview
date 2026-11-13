@@ -28,6 +28,18 @@ const ZIP_BASED_ARCHIVE_EXTENSIONS = [
   ".ipa",
   ".appx",
   ".msix",
+  ".aab",
+  ".xapk",
+  ".docm",
+  ".xlsm",
+  ".pptm",
+  ".odg",
+  ".vsdx",
+  ".3mf",
+  ".pkpass",
+  ".sublime-package",
+  ".mcpack",
+  ".sketch",
 ] as const;
 
 const TAR_ARCHIVE_EXTENSIONS = [".tar"] as const;
@@ -43,7 +55,7 @@ const LZMA_ARCHIVE_EXTENSIONS = [".lzma"] as const;
 const ZSTD_ARCHIVE_EXTENSIONS = [".zst", ".zstd"] as const;
 const SEVEN_ZIP_ARCHIVE_EXTENSIONS = [".7z"] as const;
 
-const SUPPORTED_ARCHIVE_EXTENSIONS = [
+export const SUPPORTED_ARCHIVE_EXTENSIONS = [
   ...TBZ_ARCHIVE_EXTENSIONS,
   ...TXZ_ARCHIVE_EXTENSIONS,
   ...TZST_ARCHIVE_EXTENSIONS,

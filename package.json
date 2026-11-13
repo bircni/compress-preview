@@ -39,6 +39,9 @@
     "ods",
     "odp",
     "nupkg",
+    "aab",
+    "3mf",
+    "vsdx",
     "preview",
     "archive",
     "vscode",
@@ -242,6 +245,42 @@
           },
           {
             "filenamePattern": "*.msix"
+          },
+          {
+            "filenamePattern": "*.aab"
+          },
+          {
+            "filenamePattern": "*.xapk"
+          },
+          {
+            "filenamePattern": "*.docm"
+          },
+          {
+            "filenamePattern": "*.xlsm"
+          },
+          {
+            "filenamePattern": "*.pptm"
+          },
+          {
+            "filenamePattern": "*.odg"
+          },
+          {
+            "filenamePattern": "*.vsdx"
+          },
+          {
+            "filenamePattern": "*.3mf"
+          },
+          {
+            "filenamePattern": "*.pkpass"
+          },
+          {
+            "filenamePattern": "*.sublime-package"
+          },
+          {
+            "filenamePattern": "*.mcpack"
+          },
+          {
+            "filenamePattern": "*.sketch"
           },
           {
             "filenamePattern": "*.tar"
