@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0](https://github.com/bircni/compress-preview/compare/v0.7.1..v0.8.0) - 2026-11-13
+
+### Added
+
+- **(archive)** support LZMA-alone .lzma, .tlz and .tar.lzma - ([acdea36](https://github.com/bircni/compress-preview/commit/acdea364da33cad50829754ca266f081de386584))
+- **(archive)** support ar archives (.deb, .udeb, .ar, .a) - ([402cebe](https://github.com/bircni/compress-preview/commit/402cebe3943ccd40ae906d7a07ba49c3b69bac88))
+- **(format)** add more ZIP-based formats and a manifest consistency test - ([d641098](https://github.com/bircni/compress-preview/commit/d641098cc20259281b775f210ccc7dc787c27f45))
+
+### Fixed
+
+- **(extract)** remove partial output when single-entry extraction fails - ([6cf2080](https://github.com/bircni/compress-preview/commit/6cf208053342c2045c3fe3b6073cd04377ea692c))
+
+### Internal
+
+- **(deps)** update dev dependencies to latest - ([2eaef9d](https://github.com/bircni/compress-preview/commit/2eaef9d623363d4b3c8d4e933482c846ba3846ec))
+- **(deps)** override glob and minimatch to patched versions - ([35806d1](https://github.com/bircni/compress-preview/commit/35806d1f763294636c33ec372b70b13a8b45f251))
+- **(package)** exclude test and e2e outputs from the VSIX - ([a44b4d0](https://github.com/bircni/compress-preview/commit/a44b4d003581a32fa109437aca05f0e2063145de))
+- make tests and scripts pass the strict typecheck - ([e28b327](https://github.com/bircni/compress-preview/commit/e28b3277ed0e165416bdeac40304b6d4298f161c))
+
 ## [0.7.1](https://github.com/bircni/compress-preview/compare/v0.7.0..v0.7.1) - 2026-10-18
 
 ### Fixed
