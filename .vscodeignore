@@ -73,3 +73,8 @@ cliff.toml
 .fixtures/**
 playwright.config.js
 test/**
+out/**
+test-results/**
+playwright-report/**
+knip.json
+tsconfig.e2e.json
